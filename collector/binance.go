@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -81,15 +80,15 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 }
 
 // avgInt64 是一个计算 int64 切片平均值的辅助函数
-func avgInt64(series []int64) int64 {
+func avgInt64(series []float64) float64 {
 	if len(series) == 0 {
 		return 0
 	}
-	var sum int64
+	var sum float64
 	for _, v := range series {
 		sum += v
 	}
-	return sum / int64(len(series))
+	return sum / float64(len(series))
 }
 
 func sliceLastN(series []float64, n int) []float64 {
@@ -104,7 +103,7 @@ func sliceLastN(series []float64, n int) []float64 {
 
 // fetchFullKlines 获取完整的K线数据，用于计算ATR和Volume
 func (b *binanceProvider) fetchFullKlines(ctx context.Context, symbol, interval string, limit int) (
-	klines []*binance.Kline, high, low, close []float64, volume []int64, err error,
+	klines []*binance.Kline, high, low, close, volume []float64, err error,
 ) {
 	klines, err = b.client.NewKlinesService().Symbol(symbol).Interval(interval).Limit(limit).Do(ctx)
 	if err != nil {
@@ -114,7 +113,7 @@ func (b *binanceProvider) fetchFullKlines(ctx context.Context, symbol, interval 
 	high = make([]float64, len(klines))
 	low = make([]float64, len(klines))
 	close = make([]float64, len(klines))
-	volume = make([]int64, len(klines))
+	volume = make([]float64, len(klines))
 
 	for i, k := range klines {
 		h, _ := strconv.ParseFloat(k.High, 64)
@@ -126,7 +125,7 @@ func (b *binanceProvider) fetchFullKlines(ctx context.Context, symbol, interval 
 		high[i] = h
 		low[i] = l
 		close[i] = c
-		volume[i] = int64(math.Round(v)) // 四舍五入为整数
+		volume[i] = v // 四舍五入为整数
 	}
 	return klines, high, low, close, volume, nil
 }
@@ -164,7 +163,7 @@ func (b *binanceProvider) fetchOIFundingData(ctx context.Context, symbol string)
 		}
 		oi, err := strconv.ParseFloat(res.OpenInterest, 64)
 		if err == nil {
-			result.OILatest = int64(math.Round(oi))
+			result.OILatest = oi
 		}
 		return nil
 	})
@@ -185,7 +184,7 @@ func (b *binanceProvider) fetchOIFundingData(ctx context.Context, symbol string)
 			oi, _ := strconv.ParseFloat(h.SumOpenInterest, 64)
 			sum += oi
 		}
-		result.OIAvg = int64(math.Round(sum / float64(len(hist))))
+		result.OIAvg = sum / float64(len(hist))
 		return nil
 	})
 
@@ -274,6 +273,7 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 		data.LongTerm.ATR3_4h = lo.LastOrEmpty(atr3_4h)
 		data.LongTerm.ATR14_4h = lo.LastOrEmpty(atr14_4h)
 		data.LongTerm.VolCurr = lo.LastOrEmpty(vol4h)
+		//data.LongTerm.VolAvg = lo.Sum(vol4h) / float64(len(vol4h))
 		data.LongTerm.VolAvg = avgInt64(vol4h)
 
 		// 只修改序列数据

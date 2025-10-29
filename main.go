@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	json "github.com/bytedance/sonic"
 	"github.com/gtoxlili/echoAlpha/collector"
+	"github.com/gtoxlili/echoAlpha/prompts"
 )
 
 var assetUniverse = []string{"BTC", "ETH", "SOL", "BNB"}
@@ -32,6 +32,5 @@ func main() {
 	provider := collector.ResolveCollector("Binance", assetUniverse)
 
 	data, _ := provider.AssemblePromptData(context.Background())
-	jsonData, _ := json.MarshalIndent(data, "", "  ")
-	fmt.Println(string(jsonData))
+	fmt.Println(prompts.BuildUserPrompt(data))
 }

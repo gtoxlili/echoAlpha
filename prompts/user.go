@@ -90,7 +90,7 @@ RSI indicators (14-Period, 4h): [{rsi14_4h}]
 func formatFloatSlice(slice []float64) string {
 	var b strings.Builder
 	for i, v := range slice {
-		b.WriteString(fmt.Sprintf("%f", v))
+		b.WriteString(fmt.Sprintf("%.2f", v))
 		if i < len(slice)-1 {
 			b.WriteString(", ")
 		}
@@ -154,24 +154,24 @@ func buildAllCoinsBlock(coins map[string]entity.CoinData) string {
 
 		r := strings.NewReplacer(
 			"{symbol}", symbol,
-			"{price}", fmt.Sprintf("%f", coinData.Price),
-			"{ema20}", fmt.Sprintf("%f", coinData.EMA20),
-			"{macd}", fmt.Sprintf("%f", coinData.MACD),
-			"{rsi7}", fmt.Sprintf("%f", coinData.RSI7),
-			"{oi_latest}", fmt.Sprintf("%f", coinData.OILatest),
-			"{oi_avg}", fmt.Sprintf("%f", coinData.OIAvg),
+			"{price}", fmt.Sprintf("%.2f", coinData.Price),
+			"{ema20}", fmt.Sprintf("%.2f", coinData.EMA20),
+			"{macd}", fmt.Sprintf("%.2f", coinData.MACD),
+			"{rsi7}", fmt.Sprintf("%.2f", coinData.RSI7),
+			"{oi_latest}", fmt.Sprintf("%.2f", coinData.OILatest),
+			"{oi_avg}", fmt.Sprintf("%.2f", coinData.OIAvg),
 			"{funding_rate}", fmt.Sprintf("%f", coinData.FundRate),
 			"{prices_3m}", prices3mStr,
 			"{ema20_3m}", ema20_3mStr,
 			"{macd_3m}", macd3mStr,
 			"{rsi7_3m}", rsi7_3mStr,
 			"{rsi14_3m}", rsi14_3mStr,
-			"{ema20_4h}", fmt.Sprintf("%f", coinData.EMA20_4h),
-			"{ema50_4h}", fmt.Sprintf("%f", coinData.EMA50_4h),
-			"{atr3_4h}", fmt.Sprintf("%f", coinData.ATR3_4h),
-			"{atr14_4h}", fmt.Sprintf("%f", coinData.ATR14_4h),
-			"{volume_current}", fmt.Sprintf("%f", coinData.VolCurr),
-			"{volume_avg}", fmt.Sprintf("%f", coinData.VolAvg),
+			"{ema20_4h}", fmt.Sprintf("%.2f", coinData.EMA20_4h),
+			"{ema50_4h}", fmt.Sprintf("%.2f", coinData.EMA50_4h),
+			"{atr3_4h}", fmt.Sprintf("%.2f", coinData.ATR3_4h),
+			"{atr14_4h}", fmt.Sprintf("%.2f", coinData.ATR14_4h),
+			"{volume_current}", fmt.Sprintf("%.2f", coinData.VolCurr),
+			"{volume_avg}", fmt.Sprintf("%.2f", coinData.VolAvg),
 			"{macd_4h}", macd4hStr,
 			"{rsi14_4h}", rsi14_4hStr,
 		)

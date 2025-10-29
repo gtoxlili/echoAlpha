@@ -21,8 +21,8 @@ type CoinData struct {
 
 // OIFunding 包含持仓量和资金费率数据
 type OIFunding struct {
-	OILatest int64   `json:"oi_latest"`
-	OIAvg    int64   `json:"oi_avg"`
+	OILatest float64 `json:"oi_latest"`
+	OIAvg    float64 `json:"oi_avg"`
 	FundRate float64 `json:"fund_rate"`
 }
 
@@ -41,8 +41,8 @@ type LongTerm struct {
 	EMA50_4h float64   `json:"ema_50_4h"`
 	ATR3_4h  float64   `json:"atr_3_4h"`
 	ATR14_4h float64   `json:"atr_14_4h"`
-	VolCurr  int64     `json:"vol_curr"`
-	VolAvg   int64     `json:"vol_avg"`
+	VolCurr  float64   `json:"vol_curr"`
+	VolAvg   float64   `json:"vol_avg"`
 	MACD_4h  []float64 `json:"macd_4h"`
 	RSI14_4h []float64 `json:"rsi_14_4h"`
 }
