@@ -97,7 +97,7 @@ func main() {
 		},
 	}
 
-	agent, err := llm.NewAgent("OKX", assetUniverse, "doubao-seed-1-6-251015")
+	agent, err := llm.NewAgent("Hyperliquid", assetUniverse, "doubao-seed-1-6-251015")
 	if err != nil {
 		panic(err)
 	}
