@@ -76,28 +76,6 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 	return *promptData, nil
 }
 
-// avgInt64 是一个计算 int64 切片平均值的辅助函数
-func avgInt64(series []float64) float64 {
-	if len(series) == 0 {
-		return 0
-	}
-	var sum float64
-	for _, v := range series {
-		sum += v
-	}
-	return sum / float64(len(series))
-}
-
-func sliceLastN(series []float64, n int) []float64 {
-	if len(series) == 0 {
-		return []float64{} // 返回空切片而不是 nil
-	}
-	if len(series) <= n {
-		return series
-	}
-	return series[len(series)-n:]
-}
-
 // fetchFullKlines 获取完整的K线数据，用于计算ATR和Volume
 func (b *binanceProvider) fetchFullKlines(ctx context.Context, symbol, interval string, limit int) (
 	klines []*binance.Kline, high, low, close, volume []float64, err error,
@@ -175,12 +153,11 @@ func (b *binanceProvider) fetchOIFundingData(ctx context.Context, symbol string)
 			return nil
 		}
 
-		var sum float64
-		for _, h := range hist {
+		result.OIAvg = lo.SumBy(hist, func(h *futures.OpenInterestStatistic) float64 {
 			oi, _ := strconv.ParseFloat(h.SumOpenInterest, 64)
-			sum += oi
-		}
-		result.OIAvg = sum / float64(len(hist))
+			return oi
+		}) / float64(len(hist))
+
 		return nil
 	})
 
@@ -234,11 +211,11 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 		const seriesLength = 30
 
 		// 填充 Intraday 结构
-		data.Intraday.Prices3m = sliceLastN(prices3m, seriesLength)
-		data.Intraday.EMA20_3m = sliceLastN(ema20_3m, seriesLength)
-		data.Intraday.MACD_3m = sliceLastN(macd_3m, seriesLength)
-		data.Intraday.RSI7_3m = sliceLastN(rsi7_3m, seriesLength)
-		data.Intraday.RSI14_3m = sliceLastN(rsi14_3m, seriesLength)
+		data.Intraday.Prices3m = lo.Subset(prices3m, -seriesLength, uint(seriesLength))
+		data.Intraday.EMA20_3m = lo.Subset(ema20_3m, -seriesLength, uint(seriesLength))
+		data.Intraday.MACD_3m = lo.Subset(macd_3m, -seriesLength, uint(seriesLength))
+		data.Intraday.RSI7_3m = lo.Subset(rsi7_3m, -seriesLength, uint(seriesLength))
+		data.Intraday.RSI14_3m = lo.Subset(rsi14_3m, -seriesLength, uint(seriesLength))
 
 		// 填充 Snapshot 数据 (使用 3m 数据的最新值)
 		data.EMA20 = lo.LastOrEmpty(ema20_3m)
@@ -269,12 +246,11 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 		data.LongTerm.ATR3_4h = lo.LastOrEmpty(atr3_4h)
 		data.LongTerm.ATR14_4h = lo.LastOrEmpty(atr14_4h)
 		data.LongTerm.VolCurr = lo.LastOrEmpty(vol4h)
-		//data.LongTerm.VolAvg = lo.Sum(vol4h) / float64(len(vol4h))
-		data.LongTerm.VolAvg = avgInt64(vol4h)
+		data.LongTerm.VolAvg = lo.Sum(vol4h) / float64(len(vol4h))
 
 		// 只修改序列数据
-		data.LongTerm.MACD_4h = sliceLastN(macd_4h, seriesLength)
-		data.LongTerm.RSI14_4h = sliceLastN(rsi14_4h, seriesLength)
+		data.LongTerm.MACD_4h = lo.Subset(macd_4h, -seriesLength, uint(seriesLength))
+		data.LongTerm.RSI14_4h = lo.Subset(rsi14_4h, -seriesLength, uint(seriesLength))
 
 		return nil
 	})
