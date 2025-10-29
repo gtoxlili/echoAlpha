@@ -1,0 +1,36 @@
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+bin/
+vendor/
+
+# Version control
+.git
+.gitignore
+.gitattributes
+.svn
+.hg
+.local
+
+# IDE and editor specific
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Local development and temp files
+*.log
+docker-compose.yml
+docker-compose.yaml
+Dockerfile # 通常不需要将 Dockerfile 本身包含在镜像中
+README.md
+
+# OS-specific files
+Thumbs.db

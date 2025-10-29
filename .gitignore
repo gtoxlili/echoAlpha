@@ -1,0 +1,11 @@
+/dist/
+/.idea/
+/.vscode/
+/*.exe
+/*.log
+/*.out
+/*.test
+/vendor/
+*.sqlite
+config.local.yaml
+/cmd/server/frontend/*
