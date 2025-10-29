@@ -2,7 +2,7 @@ package collector
 
 import (
 	"context"
-	"echoAlpha/entity"
+	"github.com/gtoxlili/echoAlpha/entity"
 )
 
 type StateProvider interface {

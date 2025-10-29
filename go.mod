@@ -1,4 +1,4 @@
-module echoAlpha
+module github.com/gtoxlili/echoAlpha
 
 go 1.25
 

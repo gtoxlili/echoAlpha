@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"echoAlpha/entity"
-	"echoAlpha/llm"
+	"github.com/gtoxlili/echoAlpha/entity"
+	"github.com/gtoxlili/echoAlpha/llm"
 )
 
 var assetUniverse = []string{"BTC", "ETH"}

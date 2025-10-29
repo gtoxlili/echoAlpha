@@ -2,10 +2,10 @@ package llm
 
 import (
 	"context"
-	"echoAlpha/entity"
-	"echoAlpha/prompts"
-	"echoAlpha/utils"
 	"fmt"
+	"github.com/gtoxlili/echoAlpha/entity"
+	"github.com/gtoxlili/echoAlpha/prompts"
+	"github.com/gtoxlili/echoAlpha/utils"
 
 	"github.com/openai/openai-go/v2"
 	"github.com/openai/openai-go/v2/shared"

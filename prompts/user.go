@@ -1,8 +1,8 @@
 package prompts
 
 import (
-	"echoAlpha/entity"
 	"fmt"
+	"github.com/gtoxlili/echoAlpha/entity"
 	"strings"
 )
 
