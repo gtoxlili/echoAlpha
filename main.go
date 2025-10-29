@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
+	json "github.com/bytedance/sonic"
 	"github.com/gtoxlili/echoAlpha/collector"
 )
 
@@ -27,5 +29,10 @@ func main() {
 	//
 	//analysis.Print()
 
-	fmt.Println(collector.AssemblePromptData())
+	provider := collector.ResolveCollector("Binance", assetUniverse)
+
+	data, _ := provider.AssemblePromptData(context.Background())
+
+	jsonData, _ := json.MarshalIndent(data, "", "  ")
+	fmt.Println(string(jsonData))
 }

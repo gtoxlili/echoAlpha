@@ -8,7 +8,7 @@ import (
 
 type mockProvider struct{}
 
-func (mp *mockProvider) GetPromptData(
+func (mp *mockProvider) AssemblePromptData(
 	ctx context.Context,
 ) (entity.PromptData, error) {
 	mockData := entity.PromptData{

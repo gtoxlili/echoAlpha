@@ -4,15 +4,100 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"strings"
+	"sync"
 
 	"github.com/adshao/go-binance/v2"
 	"github.com/cinar/indicator"
 	"github.com/gtoxlili/echoAlpha/entity"
+	"github.com/samber/lo"
+	lop "github.com/samber/lo/parallel"
 )
 
+type binanceProvider struct {
+	client *binance.Client
+	coins  []string
+}
+
+func newBinanceProvider(apiKey, secretKey string, coins []string) *binanceProvider {
+	client := binance.NewClient(apiKey, secretKey)
+	return &binanceProvider{
+		client: client,
+		coins: lo.Map(coins, func(c string, _ int) string {
+			return strings.ToUpper(c) + "USDT"
+		}),
+	}
+}
+
+// AssemblePromptData 汇总数据示例，需根据完整结构继续填充
+func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.PromptData, error) {
+	var coinDatas sync.Map
+
+	lop.ForEach(b.coins, func(symbol string, _ int) {
+		currentPrice, err := b.fetchCurrentPrice(ctx, symbol)
+		if err != nil {
+			return
+		}
+
+		closePrices, err := b.fetchClosePrices(ctx, symbol, "1m", 30)
+		if err != nil {
+			return
+		}
+
+		ema20 := calculateEMA20(closePrices)
+		macd, _, _ := calculateMACD(closePrices)
+		rsi7 := calculateRSI(closePrices, 7)
+
+		coinData := entity.CoinData{
+			Price: currentPrice,
+			EMA20: ema20,
+			MACD:  macd,
+			RSI7:  rsi7,
+			// OIFunding, Intraday, LongTerm 另需实现
+		}
+
+		coinDatas.Store(symbol, coinData)
+	})
+
+	// TODO: 获取账户数据，仓位数据，构建 AccountData 和 Positions
+
+	promptData := &entity.PromptData{
+		MinutesElapsed: 0, // 调用时刻计算或传入
+		Coins:          make(map[string]entity.CoinData, len(b.coins)),
+		Account:        entity.AccountData{},    // 需填充
+		Positions:      []entity.PositionData{}, // 需填充
+	}
+
+	coinDatas.Range(func(key, value any) bool {
+		symbol := key.(string)
+		coinData := value.(entity.CoinData)
+		promptData.Coins[symbol] = coinData
+		return true
+	})
+
+	return *promptData, nil
+}
+
+func (b *binanceProvider) fetchCurrentPrice(ctx context.Context, symbol string) (float64, error) {
+	prices, err := b.client.NewListPricesService().Do(ctx)
+	if err != nil {
+		return 0, err
+	}
+	for _, p := range prices {
+		if p.Symbol == symbol {
+			price, err := strconv.ParseFloat(p.Price, 64)
+			if err != nil {
+				return 0, err
+			}
+			return price, nil
+		}
+	}
+	return 0, errors.New("symbol not found in price list")
+}
+
 // 获取指定交易对指定周期的历史K线收盘价
-func fetchClosePrices(client *binance.Client, symbol, interval string, limit int) ([]float64, error) {
-	klines, err := client.NewKlinesService().Symbol(symbol).Interval(interval).Limit(limit).Do(context.Background())
+func (b *binanceProvider) fetchClosePrices(ctx context.Context, symbol, interval string, limit int) ([]float64, error) {
+	klines, err := b.client.NewKlinesService().Symbol(symbol).Interval(interval).Limit(limit).Do(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -55,66 +140,4 @@ func calculateRSI(prices []float64, period int) float64 {
 		return 0
 	}
 	return rsiSeries[len(rsiSeries)-1]
-}
-
-func fetchCurrentPrice(client *binance.Client, symbol string) (float64, error) {
-	prices, err := client.NewListPricesService().Do(context.Background())
-	if err != nil {
-		return 0, err
-	}
-	for _, p := range prices {
-		if p.Symbol == symbol {
-			price, err := strconv.ParseFloat(p.Price, 64)
-			if err != nil {
-				return 0, err
-			}
-			return price, nil
-		}
-	}
-	return 0, errors.New("symbol not found in price list")
-}
-
-// AssemblePromptData 汇总数据示例，需根据完整结构继续填充
-func AssemblePromptData(apiKey, secretKey string, symbol string) (*entity.PromptData, error) {
-	client := binance.NewClient(apiKey, secretKey)
-
-	// 拉取现价
-	currentPrice, err := fetchCurrentPrice(client, symbol)
-	if err != nil {
-		return nil, err
-	}
-
-	// 拉取过去K线作为计算指标基础，示例取30条1分钟K线
-	closePrices, err := fetchClosePrices(client, symbol, "1m", 30)
-	if err != nil {
-		return nil, err
-	}
-
-	// 计算指标
-	ema20 := calculateEMA20(closePrices)
-	macd, _, _ := calculateMACD(closePrices)
-	rsi7 := calculateRSI(closePrices, 7)
-
-	// 组织数据结构，示例填充部分CoinData
-	coinData := entity.CoinData{
-		Price: currentPrice,
-		EMA20: ema20,
-		MACD:  macd,
-		RSI7:  rsi7,
-		// OIFunding, Intraday, LongTerm 另需实现
-	}
-
-	coins := make(map[string]entity.CoinData)
-	coins[symbol] = coinData
-
-	// TODO: 获取账户数据，仓位数据，构建 AccountData 和 Positions
-
-	promptData := &entity.PromptData{
-		MinutesElapsed: 0, // 调用时刻计算或传入
-		Coins:          coins,
-		Account:        entity.AccountData{},    // 需填充
-		Positions:      []entity.PositionData{}, // 需填充
-	}
-
-	return promptData, nil
 }
