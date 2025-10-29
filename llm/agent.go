@@ -38,17 +38,18 @@ func (a *Agent) RunAnalysis(
 	ctx context.Context,
 	data entity.PromptData,
 ) (entity.TradeSignals, error) {
+	userPrompt := prompts.BuildUserPrompt(data)
 	param := openai.ChatCompletionNewParams{
 		Model: a.model,
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.SystemMessage(a.systemPrompt),
-			openai.UserMessage(prompts.BuildUserPrompt(data)),
+			openai.UserMessage(userPrompt),
 		},
 		Temperature: openai.Float(0.5),
 		ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{
 			OfJSONObject: lo.ToPtr(shared.NewResponseFormatJSONObjectParam()),
 		},
-		ReasoningEffort: openai.ReasoningEffortMinimal,
+		ReasoningEffort: openai.ReasoningEffortHigh,
 	}
 
 	completion, err := a.client.Chat.Completions.New(ctx, param)
