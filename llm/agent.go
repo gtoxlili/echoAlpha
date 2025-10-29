@@ -45,11 +45,11 @@ func (a *Agent) RunAnalysis(
 			openai.SystemMessage(a.systemPrompt),
 			openai.UserMessage(userPrompt),
 		},
-		Temperature: openai.Float(0.5),
+		Temperature: openai.Float(0.6),
 		ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{
 			OfJSONObject: lo.ToPtr(shared.NewResponseFormatJSONObjectParam()),
 		},
-		ReasoningEffort: openai.ReasoningEffortHigh,
+		ReasoningEffort: openai.ReasoningEffortMinimal,
 	}
 
 	completion, err := a.client.Chat.Completions.New(ctx, param)

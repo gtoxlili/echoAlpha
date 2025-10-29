@@ -1,5 +1,11 @@
 package entity
 
+import (
+	"fmt"
+
+	json "github.com/bytedance/sonic"
+)
+
 // PromptData 是包含所有上下文的顶级结构
 type PromptData struct {
 	MinutesElapsed float64             `json:"minutes_elapsed"`
@@ -75,4 +81,9 @@ type ExitPlanData struct {
 	ProfitTarget float64 `json:"profit_target"`
 	StopLoss     float64 `json:"stop_loss"`
 	InvalidCond  string  `json:"invalid_cond"`
+}
+
+func (pd *PromptData) Print() {
+	jsonData, _ := json.MarshalIndent(pd, "", "  ")
+	fmt.Printf("%s\n", jsonData)
 }
