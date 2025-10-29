@@ -9,6 +9,7 @@ require (
 	github.com/kaptinlin/jsonrepair v0.2.4
 	github.com/openai/openai-go/v2 v2.7.1
 	github.com/samber/lo v1.52.0
+	golang.org/x/sync v0.11.0
 )
 
 require (

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/adshao/go-binance/v2"
+	"github.com/adshao/go-binance/v2/futures"
 	"github.com/cinar/indicator"
 	"github.com/gtoxlili/echoAlpha/entity"
 	"github.com/samber/lo"
@@ -19,20 +21,58 @@ import (
 )
 
 type binanceProvider struct {
-	client    *binance.Client
-	coins     []string
-	createdAt time.Time
+	client        *binance.Client
+	futuresClient *futures.Client
+	coins         []string
+	createdAt     time.Time
 }
 
 func newBinanceProvider(apiKey, secretKey string, coins []string) *binanceProvider {
 	client := binance.NewClient(apiKey, secretKey)
+	futuresClient := binance.NewFuturesClient(apiKey, secretKey) // USDT-M Futures
 	return &binanceProvider{
-		client: client,
+		client:        client,
+		futuresClient: futuresClient,
 		coins: lo.Map(coins, func(c string, _ int) string {
 			return strings.ToUpper(c) + "USDT"
 		}),
 		createdAt: time.Now(),
 	}
+}
+
+// AssemblePromptData (重构后)
+func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.PromptData, error) {
+	var liveSymbolPrices sync.Map
+
+	// lop.ForEach 会并行执行
+	lop.ForEach(b.coins, func(symbol string, _ int) {
+		coinData, err := b.fetchCoinData(ctx, symbol)
+		if err != nil {
+			log.Printf("error fetching data for %s: %v", symbol, err)
+			return // 跳过这个代币
+		}
+		liveSymbolPrices.Store(symbol, coinData)
+	})
+
+	// TODO: 获取账户数据，仓位数据，构建 AccountData 和 Positions
+	// accountData, err := b.fetchAccountData(ctx)
+	// positionsData, err := b.fetchPositionsData(ctx)
+
+	promptData := &entity.PromptData{
+		MinutesElapsed: time.Since(b.createdAt).Minutes(),
+		Coins:          make(map[string]entity.CoinData, len(b.coins)),
+		Account:        entity.AccountData{},    // 需填充
+		Positions:      []entity.PositionData{}, // 需填充
+	}
+
+	liveSymbolPrices.Range(func(key, value any) bool {
+		symbol := key.(string)
+		coinData := value.(entity.CoinData)
+		promptData.Coins[symbol] = coinData
+		return true
+	})
+
+	return *promptData, nil
 }
 
 // avgInt64 是一个计算 int64 切片平均值的辅助函数
@@ -85,7 +125,7 @@ func (b *binanceProvider) fetchOIFundingData(ctx context.Context, symbol string)
 	// 1. 获取最新资金费率
 	eg.Go(func() error {
 		// 资金费率和溢价指数
-		res, err := b.client.NewPremiumIndexService().Symbol(symbol).Do(ctx)
+		res, err := b.futuresClient.NewPremiumIndexService().Symbol(symbol).Do(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch premium index (funding rate): %w", err)
 		}
@@ -100,7 +140,7 @@ func (b *binanceProvider) fetchOIFundingData(ctx context.Context, symbol string)
 
 	// 2. 获取最新持仓量
 	eg.Go(func() error {
-		res, err := b.client.NewOpenInterestService().Symbol(symbol).Do(ctx)
+		res, err := b.futuresClient.NewGetOpenInterestService().Symbol(symbol).Do(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch open interest: %w", err)
 		}
@@ -114,7 +154,7 @@ func (b *binanceProvider) fetchOIFundingData(ctx context.Context, symbol string)
 	// 3. 获取持仓量历史数据（用于计算平均值）
 	// 我们获取过去24小时的数据（288 * 5min = 24h）
 	eg.Go(func() error {
-		hist, err := b.client.NewOpenInterestHistService().Symbol(symbol).Period("5m").Limit(288).Do(ctx)
+		hist, err := b.futuresClient.NewOpenInterestStatisticsService().Symbol(symbol).Period("5m").Limit(288).Do(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch open interest history: %w", err)
 		}
@@ -157,8 +197,7 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 	eg.Go(func() error {
 		oiFunding, err := b.fetchOIFundingData(gctx, symbol)
 		if err != nil {
-			// OI/Funding 数据通常不是关键路径，可以选择性地忽略错误
-			// log.Printf("Warning: failed to fetch OIFunding for %s: %v", symbol, err)
+			log.Printf("warning: failed to fetch OIFunding for %s: %v", symbol, err)
 			return nil // 暂时忽略错误，避免整个数据失败
 		}
 		data.OIFunding = oiFunding
@@ -228,42 +267,6 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 	}
 
 	return data, nil
-}
-
-// AssemblePromptData (重构后)
-func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.PromptData, error) {
-	var liveSymbolPrices sync.Map
-
-	// lop.ForEach 会并行执行
-	lop.ForEach(b.coins, func(symbol string, _ int) {
-		coinData, err := b.fetchCoinData(ctx, symbol)
-		if err != nil {
-			// 在真实环境中，你可能想记录这个错误，而不是让整个函数失败
-			// log.Printf("Error fetching data for %s: %v", symbol, err)
-			return // 跳过这个代币
-		}
-		liveSymbolPrices.Store(symbol, coinData)
-	})
-
-	// TODO: 获取账户数据，仓位数据，构建 AccountData 和 Positions
-	// accountData, err := b.fetchAccountData(ctx)
-	// positionsData, err := b.fetchPositionsData(ctx)
-
-	promptData := &entity.PromptData{
-		MinutesElapsed: time.Since(b.createdAt).Minutes(),
-		Coins:          make(map[string]entity.CoinData, len(b.coins)),
-		Account:        entity.AccountData{},    // 需填充
-		Positions:      []entity.PositionData{}, // 需填充
-	}
-
-	liveSymbolPrices.Range(func(key, value any) bool {
-		symbol := key.(string)
-		coinData := value.(entity.CoinData)
-		promptData.Coins[symbol] = coinData
-		return true
-	})
-
-	return *promptData, nil
 }
 
 func (b *binanceProvider) fetchCurrentPrice(ctx context.Context, symbol string) (float64, error) {

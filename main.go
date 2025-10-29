@@ -31,7 +31,8 @@ func main() {
 
 	provider := collector.ResolveCollector("Binance", assetUniverse)
 
-	data, _ := provider.AssemblePromptData(context.Background())
+	data, err := provider.AssemblePromptData(context.Background())
+	fmt.Println("AssemblePromptData err:", err)
 
 	jsonData, _ := json.MarshalIndent(data, "", "  ")
 	fmt.Println(string(jsonData))
