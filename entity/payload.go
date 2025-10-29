@@ -23,7 +23,7 @@ type CoinData struct {
 type OIFunding struct {
 	OILatest float64 `json:"oi_latest"`
 	OIAvg    float64 `json:"oi_avg"`
-	FundRate float64 `json:"fund_rate"`
+	FundRate string  `json:"fund_rate"`
 }
 
 // Intraday 包含短线（3分钟）时间框架数据

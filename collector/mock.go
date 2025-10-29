@@ -22,7 +22,7 @@ func (mp *mockProvider) AssemblePromptData(
 				OIFunding: entity.OIFunding{
 					OILatest: 1250000000,
 					OIAvg:    1200000000,
-					FundRate: 0.005,
+					FundRate: "0.0015",
 				},
 				Intraday: entity.Intraday{
 					Prices3m: []float64{65100.5, 65050.0, 65000.0, 65150.5, 65200.0, 65300.0, 65250.5, 65350.0, 65450.0, 65500.00},
@@ -50,7 +50,7 @@ func (mp *mockProvider) AssemblePromptData(
 				OIFunding: entity.OIFunding{
 					OILatest: 850000000,
 					OIAvg:    860000000,
-					FundRate: -0.002,
+					FundRate: "0.0008",
 				},
 				Intraday: entity.Intraday{
 					Prices3m: []float64{3510.0, 3505.0, 3500.0, 3502.0, 3508.0, 3512.0, 3510.0, 3514.0, 3518.0, 3520.00},

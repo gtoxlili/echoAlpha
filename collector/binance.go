@@ -12,7 +12,6 @@ import (
 
 	"github.com/adshao/go-binance/v2"
 	"github.com/adshao/go-binance/v2/futures"
-	json "github.com/bytedance/sonic"
 	"github.com/cinar/indicator"
 	"github.com/gtoxlili/echoAlpha/entity"
 	"github.com/samber/lo"
@@ -68,14 +67,12 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 	}
 
 	liveSymbolPrices.Range(func(key, value any) bool {
-		symbol := key.(string)
+		symbol := strings.TrimRight(key.(string), "USDT")
 		coinData := value.(entity.CoinData)
 		promptData.Coins[symbol] = coinData
 		return true
 	})
 
-	jsonData, _ := json.MarshalIndent(promptData, "", "  ")
-	fmt.Println(string(jsonData))
 	return *promptData, nil
 }
 
@@ -145,9 +142,8 @@ func (b *binanceProvider) fetchOIFundingData(ctx context.Context, symbol string)
 		}
 		for _, r := range res {
 			if r.Symbol == symbol {
-				fr, err := strconv.ParseFloat(r.LastFundingRate, 64)
 				if err == nil {
-					result.FundRate = fr
+					result.FundRate = r.LastFundingRate
 				}
 				break
 			}

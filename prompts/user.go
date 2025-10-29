@@ -160,7 +160,7 @@ func buildAllCoinsBlock(coins map[string]entity.CoinData) string {
 			"{rsi7}", fmt.Sprintf("%.2f", coinData.RSI7),
 			"{oi_latest}", fmt.Sprintf("%.2f", coinData.OILatest),
 			"{oi_avg}", fmt.Sprintf("%.2f", coinData.OIAvg),
-			"{funding_rate}", fmt.Sprintf("%f", coinData.FundRate),
+			"{funding_rate}", fmt.Sprintf("%s", coinData.FundRate),
 			"{prices_3m}", prices3mStr,
 			"{ema20_3m}", ema20_3mStr,
 			"{macd_3m}", macd3mStr,
