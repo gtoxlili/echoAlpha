@@ -21,6 +21,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const seriesLength = 30
+
 type binanceProvider struct {
 	client        *binance.Client
 	futuresClient *futures.Client
@@ -273,8 +275,6 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 		data.LongTerm.ATR14_4h = lo.LastOrEmpty(atr14_4h)
 		data.LongTerm.VolCurr = lo.LastOrEmpty(vol4h)
 		data.LongTerm.VolAvg = avgInt64(vol4h)
-		// --- 修改点在这里 ---
-		const seriesLength = 30
 
 		// 只修改序列数据
 		data.LongTerm.MACD_4h = sliceLastN(macd_4h, seriesLength)
