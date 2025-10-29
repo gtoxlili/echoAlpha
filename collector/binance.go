@@ -13,6 +13,7 @@ import (
 
 	"github.com/adshao/go-binance/v2"
 	"github.com/adshao/go-binance/v2/futures"
+	json "github.com/bytedance/sonic"
 	"github.com/cinar/indicator"
 	"github.com/gtoxlili/echoAlpha/entity"
 	"github.com/samber/lo"
@@ -72,6 +73,8 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 		return true
 	})
 
+	jsonData, _ := json.MarshalIndent(promptData, "", "  ")
+	fmt.Println(string(jsonData))
 	return *promptData, nil
 }
 
@@ -263,7 +266,7 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 
 	// 等待所有 goroutine 完成
 	if err := eg.Wait(); err != nil {
-		return entity.CoinData{}, err
+		return lo.Empty[entity.CoinData](), err
 	}
 
 	return data, nil
@@ -283,6 +286,7 @@ func (b *binanceProvider) fetchCurrentPrice(ctx context.Context, symbol string) 
 			return price, nil
 		}
 	}
+
 	return 0, errors.New("symbol not found in price list")
 }
 
