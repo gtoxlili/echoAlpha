@@ -2,8 +2,9 @@ package prompts
 
 import (
 	"fmt"
-	"github.com/gtoxlili/echoAlpha/entity"
 	"strings"
+
+	"github.com/gtoxlili/echoAlpha/entity"
 )
 
 // promptTemplate (主模板)
