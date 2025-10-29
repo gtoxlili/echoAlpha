@@ -9,3 +9,12 @@ import (
 type StateProvider interface {
 	GetPromptData(ctx context.Context) (entity.PromptData, error)
 }
+
+func ResolveCollector(exchange string, coins []string) StateProvider {
+	switch exchange {
+	case "Hyperliquid":
+		return &hyperliquidProvider{}
+	default:
+		return &mockProvider{}
+	}
+}
