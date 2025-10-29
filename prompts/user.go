@@ -190,7 +190,7 @@ func BuildUserPrompt(data entity.PromptData) string {
 	positionsStr := formatPositions(data.Positions)
 
 	r := strings.NewReplacer(
-		"{minutes_elapsed}", fmt.Sprintf("%d", data.MinutesElapsed),
+		"{minutes_elapsed}", fmt.Sprintf("%.0f", data.MinutesElapsed),
 		"{all_coins_data_block}", allCoinsBlockStr, // 替换整个币种块
 
 		// --- 账户字段 ---

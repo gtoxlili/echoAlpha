@@ -2,7 +2,7 @@ package entity
 
 // PromptData 是包含所有上下文的顶级结构
 type PromptData struct {
-	MinutesElapsed int                 `json:"minutes_elapsed"`
+	MinutesElapsed float64             `json:"minutes_elapsed"`
 	Coins          map[string]CoinData `json:"coins"`
 	Account        AccountData         `json:"account"`
 	Positions      []PositionData      `json:"positions"`

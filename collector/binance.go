@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/adshao/go-binance/v2"
 	"github.com/cinar/indicator"
@@ -15,8 +16,9 @@ import (
 )
 
 type binanceProvider struct {
-	client *binance.Client
-	coins  []string
+	client    *binance.Client
+	coins     []string
+	createdAt time.Time
 }
 
 func newBinanceProvider(apiKey, secretKey string, coins []string) *binanceProvider {
@@ -26,6 +28,7 @@ func newBinanceProvider(apiKey, secretKey string, coins []string) *binanceProvid
 		coins: lo.Map(coins, func(c string, _ int) string {
 			return strings.ToUpper(c) + "USDT"
 		}),
+		createdAt: time.Now(),
 	}
 }
 
@@ -62,7 +65,7 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 	// TODO: 获取账户数据，仓位数据，构建 AccountData 和 Positions
 
 	promptData := &entity.PromptData{
-		MinutesElapsed: 0, // 调用时刻计算或传入
+		MinutesElapsed: time.Since(b.createdAt).Minutes(),
 		Coins:          make(map[string]entity.CoinData, len(b.coins)),
 		Account:        entity.AccountData{},    // 需填充
 		Positions:      []entity.PositionData{}, // 需填充
@@ -79,13 +82,13 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 }
 
 func (b *binanceProvider) fetchCurrentPrice(ctx context.Context, symbol string) (float64, error) {
-	prices, err := b.client.NewListPricesService().Do(ctx)
+	prices, err := b.client.NewListSymbolTickerService().Symbol(symbol).Do(ctx)
 	if err != nil {
 		return 0, err
 	}
 	for _, p := range prices {
 		if p.Symbol == symbol {
-			price, err := strconv.ParseFloat(p.Price, 64)
+			price, err := strconv.ParseFloat(p.LastPrice, 64)
 			if err != nil {
 				return 0, err
 			}
