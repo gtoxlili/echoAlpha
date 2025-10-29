@@ -90,6 +90,16 @@ func avgInt64(series []int64) int64 {
 	return sum / int64(len(series))
 }
 
+func sliceLastN(series []float64, n int) []float64 {
+	if len(series) == 0 {
+		return []float64{} // 返回空切片而不是 nil
+	}
+	if len(series) <= n {
+		return series
+	}
+	return series[len(series)-n:]
+}
+
 // fetchFullKlines 获取完整的K线数据，用于计算ATR和Volume
 func (b *binanceProvider) fetchFullKlines(ctx context.Context, symbol, interval string, limit int) (
 	klines []*binance.Kline, high, low, close []float64, volume []int64, err error,
@@ -132,10 +142,13 @@ func (b *binanceProvider) fetchOIFundingData(ctx context.Context, symbol string)
 		if err != nil {
 			return fmt.Errorf("failed to fetch premium index (funding rate): %w", err)
 		}
-		if len(res) > 0 {
-			fr, err := strconv.ParseFloat(res[0].LastFundingRate, 64)
-			if err == nil {
-				result.FundRate = fr
+		for _, r := range res {
+			if r.Symbol == symbol {
+				fr, err := strconv.ParseFloat(r.LastFundingRate, 64)
+				if err == nil {
+					result.FundRate = fr
+				}
+				break
 			}
 		}
 		return nil
@@ -221,12 +234,14 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 		_, rsi7_3m := indicator.RsiPeriod(7, prices3m)
 		_, rsi14_3m := indicator.RsiPeriod(14, prices3m)
 
+		const seriesLength = 30
+
 		// 填充 Intraday 结构
-		data.Intraday.Prices3m = prices3m
-		data.Intraday.EMA20_3m = ema20_3m
-		data.Intraday.MACD_3m = macd_3m
-		data.Intraday.RSI7_3m = rsi7_3m
-		data.Intraday.RSI14_3m = rsi14_3m
+		data.Intraday.Prices3m = sliceLastN(prices3m, seriesLength)
+		data.Intraday.EMA20_3m = sliceLastN(ema20_3m, seriesLength)
+		data.Intraday.MACD_3m = sliceLastN(macd_3m, seriesLength)
+		data.Intraday.RSI7_3m = sliceLastN(rsi7_3m, seriesLength)
+		data.Intraday.RSI14_3m = sliceLastN(rsi14_3m, seriesLength)
 
 		// 填充 Snapshot 数据 (使用 3m 数据的最新值)
 		data.EMA20 = lo.LastOrEmpty(ema20_3m)
@@ -258,8 +273,12 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 		data.LongTerm.ATR14_4h = lo.LastOrEmpty(atr14_4h)
 		data.LongTerm.VolCurr = lo.LastOrEmpty(vol4h)
 		data.LongTerm.VolAvg = avgInt64(vol4h)
-		data.LongTerm.MACD_4h = macd_4h
-		data.LongTerm.RSI14_4h = rsi14_4h
+		// --- 修改点在这里 ---
+		const seriesLength = 30
+
+		// 只修改序列数据
+		data.LongTerm.MACD_4h = sliceLastN(macd_4h, seriesLength)
+		data.LongTerm.RSI14_4h = sliceLastN(rsi14_4h, seriesLength)
 
 		return nil
 	})
