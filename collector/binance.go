@@ -3,6 +3,8 @@ package collector
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -13,6 +15,7 @@ import (
 	"github.com/gtoxlili/echoAlpha/entity"
 	"github.com/samber/lo"
 	lop "github.com/samber/lo/parallel"
+	"golang.org/x/sync/errgroup"
 )
 
 type binanceProvider struct {
@@ -32,37 +35,219 @@ func newBinanceProvider(apiKey, secretKey string, coins []string) *binanceProvid
 	}
 }
 
-// AssemblePromptData 汇总数据示例，需根据完整结构继续填充
+// avgInt64 是一个计算 int64 切片平均值的辅助函数
+func avgInt64(series []int64) int64 {
+	if len(series) == 0 {
+		return 0
+	}
+	var sum int64
+	for _, v := range series {
+		sum += v
+	}
+	return sum / int64(len(series))
+}
+
+// fetchFullKlines 获取完整的K线数据，用于计算ATR和Volume
+func (b *binanceProvider) fetchFullKlines(ctx context.Context, symbol, interval string, limit int) (
+	klines []*binance.Kline, high, low, close []float64, volume []int64, err error,
+) {
+	klines, err = b.client.NewKlinesService().Symbol(symbol).Interval(interval).Limit(limit).Do(ctx)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+
+	high = make([]float64, len(klines))
+	low = make([]float64, len(klines))
+	close = make([]float64, len(klines))
+	volume = make([]int64, len(klines))
+
+	for i, k := range klines {
+		h, _ := strconv.ParseFloat(k.High, 64)
+		l, _ := strconv.ParseFloat(k.Low, 64)
+		c, _ := strconv.ParseFloat(k.Close, 64)
+		// 币安返回的 Volume 是 float 字符串（例如 "1234.56"），我们先解析为 float 再转为 int64
+		v, _ := strconv.ParseFloat(k.Volume, 64)
+
+		high[i] = h
+		low[i] = l
+		close[i] = c
+		volume[i] = int64(math.Round(v)) // 四舍五入为整数
+	}
+	return klines, high, low, close, volume, nil
+}
+
+// fetchOIFundingData 获取持仓量和资金费率
+// 注意：这会发起3次API调用
+func (b *binanceProvider) fetchOIFundingData(ctx context.Context, symbol string) (entity.OIFunding, error) {
+	var result entity.OIFunding
+	var eg errgroup.Group
+
+	// 1. 获取最新资金费率
+	eg.Go(func() error {
+		// 资金费率和溢价指数
+		res, err := b.client.NewPremiumIndexService().Symbol(symbol).Do(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to fetch premium index (funding rate): %w", err)
+		}
+		if len(res) > 0 {
+			fr, err := strconv.ParseFloat(res[0].LastFundingRate, 64)
+			if err == nil {
+				result.FundRate = fr
+			}
+		}
+		return nil
+	})
+
+	// 2. 获取最新持仓量
+	eg.Go(func() error {
+		res, err := b.client.NewOpenInterestService().Symbol(symbol).Do(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to fetch open interest: %w", err)
+		}
+		oi, err := strconv.ParseFloat(res.OpenInterest, 64)
+		if err == nil {
+			result.OILatest = int64(math.Round(oi))
+		}
+		return nil
+	})
+
+	// 3. 获取持仓量历史数据（用于计算平均值）
+	// 我们获取过去24小时的数据（288 * 5min = 24h）
+	eg.Go(func() error {
+		hist, err := b.client.NewOpenInterestHistService().Symbol(symbol).Period("5m").Limit(288).Do(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to fetch open interest history: %w", err)
+		}
+		if len(hist) == 0 {
+			return nil
+		}
+
+		var sum float64
+		for _, h := range hist {
+			oi, _ := strconv.ParseFloat(h.SumOpenInterest, 64)
+			sum += oi
+		}
+		result.OIAvg = int64(math.Round(sum / float64(len(hist))))
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+// fetchCoinData 为单个代币获取所有需要的数据
+// 它在内部并行执行所有网络请求
+func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (entity.CoinData, error) {
+	var data entity.CoinData
+	var eg, gctx = errgroup.WithContext(ctx)
+
+	// 组 1: 获取当前价格
+	eg.Go(func() error {
+		price, err := b.fetchCurrentPrice(gctx, symbol)
+		if err != nil {
+			return fmt.Errorf("failed to fetch current price for %s: %w", symbol, err)
+		}
+		data.Price = price
+		return nil
+	})
+
+	// 组 2: 获取 OIFunding 数据
+	eg.Go(func() error {
+		oiFunding, err := b.fetchOIFundingData(gctx, symbol)
+		if err != nil {
+			// OI/Funding 数据通常不是关键路径，可以选择性地忽略错误
+			// log.Printf("Warning: failed to fetch OIFunding for %s: %v", symbol, err)
+			return nil // 暂时忽略错误，避免整个数据失败
+		}
+		data.OIFunding = oiFunding
+		return nil
+	})
+
+	// 组 3: 获取 Intraday (3m) 数据
+	eg.Go(func() error {
+		// 根据我们之前的讨论，100条数据足够预热和计算
+		prices3m, err := b.fetchClosePrices(gctx, symbol, "3m", 100)
+		if err != nil {
+			return fmt.Errorf("failed to fetch 3m klines for %s: %w", symbol, err)
+		}
+
+		// 计算指标
+		ema20_3m := indicator.Ema(20, prices3m)
+		macd_3m, _ := indicator.Macd(prices3m)
+		_, rsi7_3m := indicator.RsiPeriod(7, prices3m)
+		_, rsi14_3m := indicator.RsiPeriod(14, prices3m)
+
+		// 填充 Intraday 结构
+		data.Intraday.Prices3m = prices3m
+		data.Intraday.EMA20_3m = ema20_3m
+		data.Intraday.MACD_3m = macd_3m
+		data.Intraday.RSI7_3m = rsi7_3m
+		data.Intraday.RSI14_3m = rsi14_3m
+
+		// 填充 Snapshot 数据 (使用 3m 数据的最新值)
+		data.EMA20 = lo.LastOrEmpty(ema20_3m)
+		data.MACD = lo.LastOrEmpty(macd_3m)
+		data.RSI7 = lo.LastOrEmpty(rsi7_3m)
+
+		return nil
+	})
+
+	// 组 4: 获取 LongTerm (4h) 数据
+	eg.Go(func() error {
+		_, high4h, low4h, close4h, vol4h, err := b.fetchFullKlines(gctx, symbol, "4h", 100)
+		if err != nil {
+			return fmt.Errorf("failed to fetch 4h klines for %s: %w", symbol, err)
+		}
+
+		// 计算指标
+		ema20_4h := indicator.Ema(20, close4h)
+		ema50_4h := indicator.Ema(50, close4h)
+		_, atr3_4h := indicator.Atr(3, high4h, low4h, close4h)   // 假设 indicator.Atr 存在
+		_, atr14_4h := indicator.Atr(14, high4h, low4h, close4h) // 假设 indicator.Atr 存在
+		macd_4h, _ := indicator.Macd(close4h)
+		_, rsi14_4h := indicator.RsiPeriod(14, close4h)
+
+		// 填充 LongTerm 结构
+		data.LongTerm.EMA20_4h = lo.LastOrEmpty(ema20_4h)
+		data.LongTerm.EMA50_4h = lo.LastOrEmpty(ema50_4h)
+		data.LongTerm.ATR3_4h = lo.LastOrEmpty(atr3_4h)
+		data.LongTerm.ATR14_4h = lo.LastOrEmpty(atr14_4h)
+		data.LongTerm.VolCurr = lo.LastOrEmpty(vol4h)
+		data.LongTerm.VolAvg = avgInt64(vol4h)
+		data.LongTerm.MACD_4h = macd_4h
+		data.LongTerm.RSI14_4h = rsi14_4h
+
+		return nil
+	})
+
+	// 等待所有 goroutine 完成
+	if err := eg.Wait(); err != nil {
+		return entity.CoinData{}, err
+	}
+
+	return data, nil
+}
+
+// AssemblePromptData (重构后)
 func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.PromptData, error) {
 	var liveSymbolPrices sync.Map
 
+	// lop.ForEach 会并行执行
 	lop.ForEach(b.coins, func(symbol string, _ int) {
-		currentPrice, err := b.fetchCurrentPrice(ctx, symbol)
+		coinData, err := b.fetchCoinData(ctx, symbol)
 		if err != nil {
-			return
+			// 在真实环境中，你可能想记录这个错误，而不是让整个函数失败
+			// log.Printf("Error fetching data for %s: %v", symbol, err)
+			return // 跳过这个代币
 		}
-
-		closePrices, err := b.fetchClosePrices(ctx, symbol, "1m", 30)
-		if err != nil {
-			return
-		}
-
-		ema20 := calculateEMA20(closePrices)
-		macd, _, _ := calculateMACD(closePrices)
-		rsi7 := calculateRSI(closePrices, 7)
-
-		coinData := entity.CoinData{
-			Price: currentPrice,
-			EMA20: ema20,
-			MACD:  macd,
-			RSI7:  rsi7,
-			// OIFunding, Intraday, LongTerm 另需实现
-		}
-
 		liveSymbolPrices.Store(symbol, coinData)
 	})
 
 	// TODO: 获取账户数据，仓位数据，构建 AccountData 和 Positions
+	// accountData, err := b.fetchAccountData(ctx)
+	// positionsData, err := b.fetchPositionsData(ctx)
 
 	promptData := &entity.PromptData{
 		MinutesElapsed: time.Since(b.createdAt).Minutes(),
@@ -113,34 +298,4 @@ func (b *binanceProvider) fetchClosePrices(ctx context.Context, symbol, interval
 		prices = append(prices, p)
 	}
 	return prices, nil
-}
-
-// 计算EMA20指标，返回最新EMA20值
-func calculateEMA20(prices []float64) float64 {
-	emaSeries := indicator.Ema(20, prices)
-	if len(emaSeries) == 0 {
-		return 0
-	}
-	return emaSeries[len(emaSeries)-1]
-}
-
-// 计算MACD指标，返回最新MACD和Signal值以及两者差值Hist
-func calculateMACD(prices []float64) (macd float64, signal float64, hist float64) {
-	macdSeries, signalSeries := indicator.Macd(prices)
-	if len(macdSeries) == 0 || len(signalSeries) == 0 {
-		return 0, 0, 0
-	}
-	macd = macdSeries[len(macdSeries)-1]
-	signal = signalSeries[len(signalSeries)-1]
-	hist = macd - signal
-	return macd, signal, hist
-}
-
-// 计算RSI指标，返回最新RSI值
-func calculateRSI(prices []float64, period int) float64 {
-	_, rsiSeries := indicator.RsiPeriod(period, prices)
-	if len(rsiSeries) == 0 {
-		return 0
-	}
-	return rsiSeries[len(rsiSeries)-1]
 }
