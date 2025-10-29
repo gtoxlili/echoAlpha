@@ -34,7 +34,7 @@ func newBinanceProvider(apiKey, secretKey string, coins []string) *binanceProvid
 
 // AssemblePromptData 汇总数据示例，需根据完整结构继续填充
 func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.PromptData, error) {
-	var coinDatas sync.Map
+	var liveSymbolPrices sync.Map
 
 	lop.ForEach(b.coins, func(symbol string, _ int) {
 		currentPrice, err := b.fetchCurrentPrice(ctx, symbol)
@@ -59,7 +59,7 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 			// OIFunding, Intraday, LongTerm 另需实现
 		}
 
-		coinDatas.Store(symbol, coinData)
+		liveSymbolPrices.Store(symbol, coinData)
 	})
 
 	// TODO: 获取账户数据，仓位数据，构建 AccountData 和 Positions
@@ -71,7 +71,7 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 		Positions:      []entity.PositionData{}, // 需填充
 	}
 
-	coinDatas.Range(func(key, value any) bool {
+	liveSymbolPrices.Range(func(key, value any) bool {
 		symbol := key.(string)
 		coinData := value.(entity.CoinData)
 		promptData.Coins[symbol] = coinData
