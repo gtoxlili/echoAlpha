@@ -73,7 +73,7 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 
 			// 使用互斥锁安全地写入 map
 			mu.Lock()
-			coinDataMap[local] = coinData
+			coinDataMap[strings.TrimSuffix(local, usdtSuffix)] = coinData
 			mu.Unlock()
 			return nil
 		})
@@ -90,22 +90,12 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 		return lo.Empty[entity.PromptData](), err
 	}
 
-	// 3. 组装最终结果
-	promptData := &entity.PromptData{
+	return entity.PromptData{
 		MinutesElapsed: time.Since(b.createdAt).Minutes(),
-		Coins:          make(map[string]entity.CoinData, len(coinDataMap)),
-		Account:        entity.AccountData{},    // 需填充
-		Positions:      []entity.PositionData{}, // 需填充
-	}
-
-	// 遍历普通 map，而不是 sync.Map
-	for symbolWithSuffix, data := range coinDataMap {
-		// 使用 TrimSuffix 更安全
-		symbol := strings.TrimSuffix(symbolWithSuffix, usdtSuffix)
-		promptData.Coins[symbol] = data
-	}
-
-	return *promptData, nil
+		Coins:          coinDataMap,
+		Account:        lo.Empty[entity.AccountData](),    // 需填充
+		Positions:      lo.Empty[[]entity.PositionData](), // 需填充
+	}, nil
 }
 
 // --- 优化点 3: 重命名为 fetchAndParseKlines ---
