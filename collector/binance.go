@@ -14,6 +14,7 @@ import (
 	"github.com/adshao/go-binance/v2/futures"
 	"github.com/cinar/indicator"
 	"github.com/gtoxlili/echoAlpha/entity"
+	"github.com/gtoxlili/echoAlpha/utils"
 	"github.com/samber/lo"
 	"golang.org/x/sync/errgroup"
 )
@@ -55,7 +56,9 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 	for _, symbol := range b.coins {
 		local := symbol
 		g.Go(func() error {
-			coinData, err := b.fetchCoinData(gctx, local)
+			coinData, err := utils.RetryWithBackoff(func() (entity.CoinData, error) {
+				return b.fetchCoinData(gctx, local)
+			}, 5)
 			if err != nil {
 				log.Printf("error fetching data for %s: %v", local, err)
 				return nil
@@ -81,6 +84,7 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (entity.CoinData, error) {
 	var data entity.CoinData
 	var g, gctx = errgroup.WithContext(ctx)
+
 	g.Go(func() error {
 		price, err := b.fetchCurrentPrice(gctx, symbol)
 		if err != nil {
@@ -93,8 +97,7 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 	g.Go(func() error {
 		oiFunding, err := b.fetchOIFundingData(gctx, symbol)
 		if err != nil {
-			log.Printf("warning: failed to fetch OIFunding for %s: %v", symbol, err)
-			return nil
+			return fmt.Errorf("failed to fetch OIFunding for %s: %w", symbol, err)
 		}
 		data.OIFunding = oiFunding
 		return nil
