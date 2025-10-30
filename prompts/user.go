@@ -122,11 +122,12 @@ func formatPositions(positions []entity.PositionData) string {
     },
     'confidence': %f,
     'risk_usd': %f,
-    'notional_usd': %f
+    'notional_usd': %f,
+	'age_in_minutes': %.0f
   }`,
 			p.Symbol, p.Quantity, p.EntryPrice, p.CurrentPrice, p.LiqPrice,
 			p.UnrealizedPNL, p.Leverage, p.ExitPlan.ProfitTarget, p.ExitPlan.StopLoss,
-			p.ExitPlan.InvalidCond, p.Confidence, p.RiskUSD, p.NotionalUSD,
+			p.ExitPlan.InvalidCond, p.Confidence, p.RiskUSD, p.NotionalUSD, p.AgeInMinutes,
 		))
 
 		if i < len(positions)-1 {
