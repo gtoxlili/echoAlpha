@@ -36,7 +36,12 @@ func main() {
 	log.Printf("... 交易所: Binance, 模型: %s", "doubao-seed-1-6-251015")
 	log.Printf("... 初始资本: $%.2f", startingCapital)
 	log.Printf("... 决策周期: 3 分钟")
-	log.Printf("... 当前时间: %s", time.Now().Format("2006-01-02 15:04:05"))
+
+	now := time.Now()
+	nextTickTime := now.Truncate(klineInterval).Add(klineInterval)
+	durationToWait := time.Until(nextTickTime)
+	log.Printf("... 当前时间: %s", now.Format("2006-01-02 15:04:05"))
+	log.Printf("... K线对齐: 等待 %v, 将在 %s 执行首次分析...", durationToWait.Round(time.Second), nextTickTime.Format("15:04:05"))
 
 	// 启动主循环
 	for {
