@@ -23,7 +23,7 @@ Your mission: Maximize risk-adjusted returns (PnL) through systematic, disciplin
 - **Starting Capital**: ${starting_capital} USDT
 - **Market Hours**: 24/7 continuous trading
 - **Decision Frequency**: {decision_frequency}
-- **Leverage Range**: 1x to {leverage_range}x (use judiciously based on conviction)
+- **Leverage Range**: {leverage_range} (use judiciously based on conviction)
 
 ## Trading Mechanics
 
@@ -91,7 +91,7 @@ For EVERY trade decision, you MUST specify:
    - Based on technical resistance levels, Fibonacci extensions, or volatility bands
 
 2. **stop_loss** (float): Exact price level to cut losses
-   - Should limit loss to 2-5% of account value per trade (Aggressive Profile)
+   - Should limit loss to 5-10% of account value per trade (Aggressive Profile)
    - Placed beyond recent support/resistance to avoid premature stops
 
 3. **invalidation_condition** (string): Specific market signal that voids your thesis
@@ -295,6 +295,7 @@ func BuildSystemPrompt(
 	modelName string,
 	startingCapital float64, // 例如: 10000.0
 	decisionFrequency string, // 例如: "Every 5 minutes"
+	minLeverage int, // 例如: 1
 	maxLeverage int, // 例如: 20
 ) string {
 	assetList := strings.Join(coins, ", ")
@@ -307,7 +308,7 @@ func BuildSystemPrompt(
 		"{coin_json_enum}", coinEnum,
 		"{starting_capital}", fmt.Sprintf("%.2f", startingCapital),
 		"{decision_frequency}", decisionFrequency,
-		"{leverage_range}", fmt.Sprintf("%d", maxLeverage),
+		"{leverage_range}", fmt.Sprintf("%dx to %dx", minLeverage, maxLeverage),
 	)
 
 	return r.Replace(systemPromptTemplate)

@@ -28,15 +28,6 @@ type Executor struct {
 	precisions map[string]SymbolPrecisions // key: symbol (e.g., "BTCUSDT")
 }
 
-// ---------------- 修改 NewExecutor ----------------
-
-// NewExecutor 现在会获取并缓存精度规则，并且会返回一个 error
-// 你的 main.go 必须修改为:
-// tradeExecutor, err := trade.NewExecutor(os.Getenv("BINANCE_API_KEY"), os.Getenv("BINANCE_SECRET_KEY"))
-//
-//	if err != nil {
-//	   log.Panicf("❌ [初始化] 致命错误: 无法创建 Executor: %v", err)
-//	}
 func NewExecutor(apiKey, secretKey string) (*Executor, error) {
 	if apiKey == "" || secretKey == "" {
 		log.Println("⚠️ [Executor] 警告: APIKey 或 SecretKey 为空。交易执行将失败。")
@@ -70,6 +61,12 @@ func (te *Executor) Order(ctx context.Context, action entity.TradeSignal) error 
 	} else {
 		return fmt.Errorf("[Executor] 收到无效的开仓信号: %s", action.Signal)
 	}
+
+	log.Printf("[Executor] 正在尝试取消 %s 的所有挂单 (SL/TP)...", symbol)
+	if err := te.cancelAllOrders(ctx, symbol); err != nil {
+		return err // 错误已在辅助函数中格式化
+	}
+	log.Printf("[Executor] %s 挂单取消成功。", symbol)
 
 	// --- 1. 设置杠杆 ---
 	log.Printf("[Executor] 正在为 %s 设置 %dx 杠杆...", symbol, action.Leverage)

@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"log"
-	"os"
 	"time"
 
 	"github.com/gtoxlili/echoAlpha/collector"
+	"github.com/gtoxlili/echoAlpha/constant"
 	"github.com/gtoxlili/echoAlpha/llm"
 	"github.com/gtoxlili/echoAlpha/trade"
 )
@@ -30,7 +30,10 @@ func main() {
 	}
 
 	tradeManager := trade.NewManager()
-	tradeExecutor := trade.NewExecutor(os.Getenv("BINANCE_API_KEY"), os.Getenv("BINANCE_API_SECRET"))
+	tradeExecutor, err := trade.NewExecutor(constant.BINANCE_API_KEY, constant.BINANCE_API_SECRET)
+	if err != nil {
+		log.Panicf("❌ [初始化] 致命错误: 无法创建 Trade Executor: %v", err)
+	}
 
 	log.Printf("... 交易所: Binance, 模型: %s", "doubao-seed-1-6-251015")
 	log.Printf("... 初始资本: $%.2f", startingCapital)

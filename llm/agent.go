@@ -25,7 +25,8 @@ func NewAgent(exchange string, coins []string, modelName string, startingCapital
 		coins,
 		modelName,
 		startingCapital,
-		"Every 5-10 minutes (mid-to-low frequency trading)",
+		"Every 6-12 minutes (mid-to-low frequency trading)",
+		1,
 		20,
 	)
 
@@ -57,7 +58,7 @@ func (a *Agent) RunAnalysis(
 		ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{
 			OfJSONObject: lo.ToPtr(shared.NewResponseFormatJSONObjectParam()),
 		},
-		ReasoningEffort: openai.ReasoningEffortMinimal,
+		ReasoningEffort: openai.ReasoningEffortHigh,
 	}
 
 	completion, err := a.client.Chat.Completions.New(ctx, param)
