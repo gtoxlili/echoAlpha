@@ -22,18 +22,15 @@ import (
 const seriesLength = 30
 
 type binanceProvider struct {
-	client        *binance.Client
-	futuresClient *futures.Client
-	coins         []string
-	createdAt     time.Time
+	client    *futures.Client
+	coins     []string
+	createdAt time.Time
 }
 
 func newBinanceProvider(apiKey, secretKey string, coins []string) *binanceProvider {
-	client := binance.NewClient(apiKey, secretKey)
 	futuresClient := binance.NewFuturesClient(apiKey, secretKey) // USDT-M Futures
 	return &binanceProvider{
-		client:        client,
-		futuresClient: futuresClient,
+		client: futuresClient,
 		coins: lo.Map(coins, func(c string, _ int) string {
 			return strings.ToUpper(c) + "USDT"
 		}),
@@ -78,7 +75,7 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 
 // fetchFullKlines 获取完整的K线数据，用于计算ATR和Volume
 func (b *binanceProvider) fetchFullKlines(ctx context.Context, symbol, interval string, limit int) (
-	klines []*binance.Kline, high, low, close, volume []float64, err error,
+	klines []*futures.Kline, high, low, close, volume []float64, err error,
 ) {
 	klines, err = b.client.NewKlinesService().Symbol(symbol).Interval(interval).Limit(limit).Do(ctx)
 	if err != nil {
@@ -114,7 +111,7 @@ func (b *binanceProvider) fetchOIFundingData(ctx context.Context, symbol string)
 	// 1. 获取最新资金费率
 	eg.Go(func() error {
 		// 资金费率和溢价指数
-		res, err := b.futuresClient.NewPremiumIndexService().Symbol(symbol).Do(ctx)
+		res, err := b.client.NewPremiumIndexService().Symbol(symbol).Do(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch premium index (funding rate): %w", err)
 		}
@@ -131,7 +128,7 @@ func (b *binanceProvider) fetchOIFundingData(ctx context.Context, symbol string)
 
 	// 2. 获取最新持仓量
 	eg.Go(func() error {
-		res, err := b.futuresClient.NewGetOpenInterestService().Symbol(symbol).Do(ctx)
+		res, err := b.client.NewGetOpenInterestService().Symbol(symbol).Do(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch open interest: %w", err)
 		}
@@ -145,7 +142,7 @@ func (b *binanceProvider) fetchOIFundingData(ctx context.Context, symbol string)
 	// 3. 获取持仓量历史数据（用于计算平均值）
 	// 我们获取过去24小时的数据（288 * 5min = 24h）
 	eg.Go(func() error {
-		hist, err := b.futuresClient.NewOpenInterestStatisticsService().Symbol(symbol).Period("5m").Limit(288).Do(ctx)
+		hist, err := b.client.NewOpenInterestStatisticsService().Symbol(symbol).Period("5m").Limit(288).Do(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch open interest history: %w", err)
 		}
@@ -196,22 +193,21 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 
 	// 组 3: 获取 Intraday (3m) 数据
 	eg.Go(func() error {
-		// 根据我们之前的讨论，100条数据足够预热和计算
-		prices3m, err := b.fetchClosePrices(gctx, symbol, "3m", 100)
+		_, _, _, close3m, _, err := b.fetchFullKlines(gctx, symbol, "3m", 100)
 		if err != nil {
 			return fmt.Errorf("failed to fetch 3m klines for %s: %w", symbol, err)
 		}
 
 		// 计算指标
-		ema203m := indicator.Ema(20, prices3m)
-		macd3m, _ := indicator.Macd(prices3m)
-		_, rsi73m := indicator.RsiPeriod(7, prices3m)
-		_, rsi143m := indicator.RsiPeriod(14, prices3m)
+		ema203m := indicator.Ema(20, close3m)
+		macd3m, _ := indicator.Macd(close3m)
+		_, rsi73m := indicator.RsiPeriod(7, close3m)
+		_, rsi143m := indicator.RsiPeriod(14, close3m)
 
 		const seriesLength = 30
 
 		// 填充 Intraday 结构
-		data.Intraday.Prices3m = lo.Subset(prices3m, -seriesLength, uint(seriesLength))
+		data.Intraday.Prices3m = lo.Subset(close3m, -seriesLength, uint(seriesLength))
 		data.Intraday.Ema203m = lo.Subset(ema203m, -seriesLength, uint(seriesLength))
 		data.Intraday.MACD3m = lo.Subset(macd3m, -seriesLength, uint(seriesLength))
 		data.Intraday.Rsi73m = lo.Subset(rsi73m, -seriesLength, uint(seriesLength))
@@ -264,13 +260,13 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 }
 
 func (b *binanceProvider) fetchCurrentPrice(ctx context.Context, symbol string) (float64, error) {
-	prices, err := b.client.NewListSymbolTickerService().Symbol(symbol).Do(ctx)
+	prices, err := b.client.NewListPricesService().Symbol(symbol).Do(ctx)
 	if err != nil {
 		return 0, err
 	}
 	for _, p := range prices {
 		if p.Symbol == symbol {
-			price, err := strconv.ParseFloat(p.LastPrice, 64)
+			price, err := strconv.ParseFloat(p.Price, 64)
 			if err != nil {
 				return 0, err
 			}
@@ -279,21 +275,4 @@ func (b *binanceProvider) fetchCurrentPrice(ctx context.Context, symbol string) 
 	}
 
 	return 0, errors.New("symbol not found in price list")
-}
-
-// 获取指定交易对指定周期的历史K线收盘价
-func (b *binanceProvider) fetchClosePrices(ctx context.Context, symbol, interval string, limit int) ([]float64, error) {
-	klines, err := b.client.NewKlinesService().Symbol(symbol).Interval(interval).Limit(limit).Do(ctx)
-	if err != nil {
-		return nil, err
-	}
-	prices := make([]float64, 0, len(klines))
-	for _, k := range klines {
-		p, err := strconv.ParseFloat(k.Close, 64)
-		if err != nil {
-			return nil, err
-		}
-		prices = append(prices, p)
-	}
-	return prices, nil
 }
