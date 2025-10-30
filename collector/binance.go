@@ -36,6 +36,7 @@ type binanceProvider struct {
 	createdAt time.Time
 	// <--- 新增字段 ---
 	// 存储历史账户总价值，用于计算 Pct 和 Sharpe
+	initialAccountValue     float64
 	historicalAccountValues []float64
 	historicalMu            sync.RWMutex // 用于保护 slice 的读写
 }
@@ -59,6 +60,7 @@ func newBinanceProvider(apiKey, secretKey string, coins []string) *binanceProvid
 		panic(err)
 	}
 	provider.historicalAccountValues = []float64{initialAmount}
+	provider.initialAccountValue = initialAmount
 
 	return provider
 }
@@ -328,17 +330,13 @@ func (b *binanceProvider) fetchAccountData(ctx context.Context) (entity.AccountD
 	b.historicalMu.Lock()
 	defer b.historicalMu.Unlock()
 
-	// 4. 添加新值，并修剪 slice (如果需要)
 	b.historicalAccountValues = append(b.historicalAccountValues, currentValue)
 	if len(b.historicalAccountValues) > maxHistoricalValues {
-		// 移除最旧的一个元素
 		b.historicalAccountValues = b.historicalAccountValues[1:]
 	}
 
-	// 5. 计算总回报率 (ReturnPct)
-	initialValue := b.historicalAccountValues[0]
-	if initialValue > 0 {
-		data.ReturnPct = (currentValue - initialValue) / initialValue
+	if b.initialAccountValue > 0 {
+		data.ReturnPct = (currentValue - b.initialAccountValue) / b.initialAccountValue
 	} else {
 		data.ReturnPct = 0.0
 	}
