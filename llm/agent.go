@@ -29,6 +29,10 @@ func NewAgent(exchange string, coins []string, modelName string, startingCapital
 		20,
 	)
 
+	fmt.Println("----- System Prompt -----")
+	fmt.Println(systemPrompt)
+	fmt.Println("----- End of System Prompt -----")
+
 	client, err := resolveClient(modelName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OpenAI client: %w", err)
@@ -46,6 +50,9 @@ func (a *Agent) RunAnalysis(
 	data entity.PromptData,
 ) (entity.TradeSignals, error) {
 	userPrompt := prompts.BuildUserPrompt(data)
+	fmt.Println("----- User Prompt -----")
+	fmt.Println(userPrompt)
+	fmt.Println("----- End of User Prompt -----")
 	param := openai.ChatCompletionNewParams{
 		Model: a.model,
 		Messages: []openai.ChatCompletionMessageParamUnion{

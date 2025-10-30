@@ -62,7 +62,7 @@ func newBinanceProvider(apiKey, secretKey string, coins []string) *binanceProvid
 	}
 	provider.historicalAccountValues = []float64{initialAmount}
 	provider.initialAccountValue = initialAmount
-	provider.createdAt = time.Now()
+	provider.createdAt = time.Now().Truncate(3 * time.Minute).Add(3 * time.Minute)
 
 	return provider
 }
