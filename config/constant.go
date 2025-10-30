@@ -15,6 +15,8 @@ const (
 	DecisionFrequency = "Every 6-12 minutes (mid-to-low frequency trading)"
 	MinLeverage       = 1
 	MaxLeverage       = 20
+
+	LLMTemperature = 0.6
 )
 
 var (

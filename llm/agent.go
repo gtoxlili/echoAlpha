@@ -57,7 +57,7 @@ func (a *Agent) RunAnalysis(
 			openai.SystemMessage(a.systemPrompt),
 			openai.UserMessage(userPrompt),
 		},
-		Temperature: openai.Float(0.6),
+		Temperature: openai.Float(config.LLMTemperature),
 		ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{
 			OfJSONObject: lo.ToPtr(shared.NewResponseFormatJSONObjectParam()),
 		},
