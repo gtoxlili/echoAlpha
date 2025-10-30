@@ -32,7 +32,7 @@ func main() {
 
 	log.Printf("... 交易所: Binance, 模型: %s", "doubao-seed-1-6-251015")
 	log.Printf("... 初始资本: $%.2f", startingCapital)
-	log.Printf("... 决策周期: 3 分钟")
+	log.Printf("... 决策周期: %.0f 分钟", config.KlineInterval.Minutes())
 
 	now := time.Now()
 	nextTickTime := now.Truncate(config.KlineInterval).Add(config.KlineInterval)

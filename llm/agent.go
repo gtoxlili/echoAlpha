@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gtoxlili/echoAlpha/config"
 	"github.com/gtoxlili/echoAlpha/entity"
 	"github.com/gtoxlili/echoAlpha/prompts"
 	"github.com/gtoxlili/echoAlpha/utils"
@@ -26,9 +27,9 @@ func NewAgent(exchange string, coins []string, modelName string, startingCapital
 		coins,
 		modelName,
 		startingCapital,
-		"Every 6-12 minutes (mid-to-low frequency trading)",
-		1,
-		20,
+		config.DecisionFrequency,
+		config.MinLeverage,
+		config.MaxLeverage,
 	)
 
 	client, err := resolveClient(modelName)

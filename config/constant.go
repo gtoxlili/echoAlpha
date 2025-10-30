@@ -11,6 +11,10 @@ const (
 	OiPeriod            = "5m"
 	OiLimit             = 288
 	MaxHistoricalValues = 1 >> 10 // 最多存储 1024 个历史账户总价值数据点
+
+	DecisionFrequency = "Every 6-12 minutes (mid-to-low frequency trading)"
+	MinLeverage       = 1
+	MaxLeverage       = 20
 )
 
 var (
