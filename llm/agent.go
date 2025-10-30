@@ -14,9 +14,10 @@ import (
 )
 
 type Agent struct {
-	client       openai.Client
-	model        string
-	systemPrompt string
+	client                openai.Client
+	model                 string
+	systemPrompt          string
+	lastPortfolioAnalysis string
 }
 
 func NewAgent(exchange string, coins []string, modelName string, startingCapital float64) (*Agent, error) {
@@ -36,18 +37,18 @@ func NewAgent(exchange string, coins []string, modelName string, startingCapital
 	}
 
 	return &Agent{
-		client:       client,
-		model:        modelName,
-		systemPrompt: systemPrompt,
+		client:                client,
+		model:                 modelName,
+		systemPrompt:          systemPrompt,
+		lastPortfolioAnalysis: "No positions are open and no prior analysis exists. The market is a blank slate. My immediate goal is to analyze the full dataset provided, establish a market baseline, and find a single, high-quality entry point that aligns with the risk management protocol.",
 	}, nil
 }
 
 func (a *Agent) RunAnalysis(
 	ctx context.Context,
 	data entity.PromptData,
-	portfolio string,
-) (entity.AIResponse, error) {
-	userPrompt := prompts.BuildUserPrompt(data, portfolio)
+) (entity.AgentDecision, error) {
+	userPrompt := prompts.BuildUserPrompt(data, a.lastPortfolioAnalysis)
 
 	param := openai.ChatCompletionNewParams{
 		Model: a.model,
@@ -64,7 +65,15 @@ func (a *Agent) RunAnalysis(
 
 	completion, err := a.client.Chat.Completions.New(ctx, param)
 	if err != nil {
-		return lo.Empty[entity.AIResponse](), fmt.Errorf("failed to get completion: %w", err)
+		return lo.Empty[entity.AgentDecision](), fmt.Errorf("failed to get completion: %w", err)
 	}
-	return utils.ParseResult[entity.AIResponse](completion)
+	decision, err := utils.ParseResult[entity.AgentDecision](completion)
+	if err != nil {
+		return lo.Empty[entity.AgentDecision](), fmt.Errorf("failed to parse completion: %w", err)
+	}
+
+	// 更新最后的组合分析
+	a.lastPortfolioAnalysis = decision.PortfolioAnalysis
+
+	return decision, nil
 }

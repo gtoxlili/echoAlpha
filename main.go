@@ -13,8 +13,6 @@ import (
 
 const klineInterval = 3 * time.Minute
 
-var lastPortfolioAnalysis = "This is the first decision cycle. Analyze the market and find the first high-conviction trade."
-
 // 假设 assetUniverse 在这里定义，或者从配置加载
 var assetUniverse = []string{"BTC", "ETH", "AERO", "BNB", "SOL"}
 
@@ -107,24 +105,23 @@ func runDecisionCycle(
 
 	// --- 步骤 3: AI 分析 ---
 	log.Println("🧠 3. [AI分析] 正在将数据提交给 LLM 进行分析...")
-	analysis, err := agent.RunAnalysis(ctx, data, lastPortfolioAnalysis)
+	decision, err := agent.RunAnalysis(ctx, data)
 	if err != nil {
 		log.Printf("❌ [AI分析] 错误: %v", err)
 		return // AI 分析失败，等待下个周期
 	}
 
-	log.Println("✅ 3. [AI分析] 完成。AI 投资组合分析摘要: ", analysis.PortfolioAnalysis)
-	lastPortfolioAnalysis = analysis.PortfolioAnalysis
+	log.Println("✅ 3. [AI分析] 完成。AI 投资组合分析摘要: ", decision.PortfolioAnalysis)
 
 	// --- 步骤 4: 决策与执行 ---
-	log.Printf("🤖 4. [AI决策] 收到 %d 个决策。", len(analysis.Actions))
-	if len(analysis.Actions) == 0 {
+	log.Printf("🤖 4. [AI决策] 收到 %d 个决策。", len(decision.Actions))
+	if len(decision.Actions) == 0 {
 		log.Println("   ... 决策为空: AI 决定 [持有/无操作]。")
 		return
 	}
 
 	log.Println("📈 5. [交易执行] 正在处理决策...")
-	for _, action := range analysis.Actions {
+	for _, action := range decision.Actions {
 		switch action.Signal {
 		case "buy_to_enter", "sell_to_enter":
 			// --- 修改后的日志 ---

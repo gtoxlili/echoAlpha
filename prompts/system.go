@@ -109,7 +109,7 @@ For EVERY trade decision, you MUST specify:
 
 ---
 
-# OUTPUT FORMAT SPECIFICATION (已修改)
+# OUTPUT FORMAT SPECIFICATION
 
 Return your decision as a **single, valid JSON OBJECT** with the following *exact* structure.
 
