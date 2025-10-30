@@ -14,7 +14,7 @@ func resolveClient(modelName string) (openai.Client, error) {
 	case strings.HasPrefix(modelName, "doubao-"):
 		return openai.NewClient(
 			option.WithAPIKey(config.VOLC_API_KEY),
-			option.WithBaseURL(config.VOLC_API_KEY),
+			option.WithBaseURL(config.VOLC_BASE_URL),
 		), nil
 	default:
 		panic("unimplemented model provider resolver")
