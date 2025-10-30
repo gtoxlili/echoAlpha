@@ -45,8 +45,9 @@ func NewAgent(exchange string, coins []string, modelName string, startingCapital
 func (a *Agent) RunAnalysis(
 	ctx context.Context,
 	data entity.PromptData,
-) (entity.TradeSignals, error) {
-	userPrompt := prompts.BuildUserPrompt(data)
+	portfolio string,
+) (entity.AIResponse, error) {
+	userPrompt := prompts.BuildUserPrompt(data, portfolio)
 
 	param := openai.ChatCompletionNewParams{
 		Model: a.model,
@@ -63,7 +64,7 @@ func (a *Agent) RunAnalysis(
 
 	completion, err := a.client.Chat.Completions.New(ctx, param)
 	if err != nil {
-		return lo.Empty[entity.TradeSignals](), fmt.Errorf("failed to get completion: %w", err)
+		return lo.Empty[entity.AIResponse](), fmt.Errorf("failed to get completion: %w", err)
 	}
-	return utils.ParseResult[entity.TradeSignals](completion)
+	return utils.ParseResult[entity.AIResponse](completion)
 }

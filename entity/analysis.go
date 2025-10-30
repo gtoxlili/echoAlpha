@@ -31,9 +31,12 @@ type TradeSignal struct {
 	Justification         string  `json:"justification"`
 }
 
-type TradeSignals []TradeSignal
+type AIResponse struct {
+	PortfolioAnalysis string        `json:"portfolio_analysis"`
+	Actions           []TradeSignal `json:"actions"`
+}
 
-func (tss TradeSignals) Print() {
-	display, _ := json.MarshalIndent(tss, "", "  ")
+func (ar AIResponse) Print() {
+	display, _ := json.MarshalIndent(ar, "", "  ")
 	fmt.Printf("%s\n", display)
 }

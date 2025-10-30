@@ -19,6 +19,14 @@ Below, we are providing you with a variety of collector data, price data, and pr
 
 ---
 
+## PREVIOUS ANALYSIS & THOUGHT PROCESS
+
+**This was your internal monologue from the last decision cycle (3 minutes ago). Use it to maintain your train of thought.**
+
+> {last_portfolio_analysis}
+
+---
+
 ## CURRENT MARKET STATE FOR ALL COINS
 
 {all_coins_data_block}
@@ -184,7 +192,7 @@ func buildAllCoinsBlock(coins map[string]entity.CoinData) string {
 	return b.String()
 }
 
-func BuildUserPrompt(data entity.PromptData) string {
+func BuildUserPrompt(data entity.PromptData, portfolio string) string {
 
 	allCoinsBlockStr := buildAllCoinsBlock(data.Coins)
 
@@ -202,6 +210,7 @@ func BuildUserPrompt(data entity.PromptData) string {
 
 		// --- 仓位块 ---
 		"{positions_block}", positionsStr,
+		"{last_portfolio_analysis}", portfolio,
 	)
 
 	// 4. 执行替换并返回

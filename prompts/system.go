@@ -109,30 +109,33 @@ For EVERY trade decision, you MUST specify:
 
 ---
 
-# OUTPUT FORMAT SPECIFICATION
+# OUTPUT FORMAT SPECIFICATION (已修改)
 
-Return your decision as a **valid JSON array** containing zero or more action objects.
-- An **empty array []** signifies a 'hold all positions' or 'do nothing' decision for this cycle.
-- If you decide to act, each object in the array must have these exact fields:
+Return your decision as a **single, valid JSON OBJECT** with the following *exact* structure.
 
-[
-  {
-    "signal": "buy_to_enter" | "sell_to_enter" | "close",
-    "coin": {coin_json_enum},
-    "quantity": <float>,
-    "leverage": <integer 1-20>,
-    "profit_target": <float>,
-    "stop_loss": <float>,
-    "invalidation_condition": "<string>",
-    "confidence": <float 0-1>,
-    "risk_usd": <float>,
-    "justification": "<string>"
-  }
-]
+{
+  "portfolio_analysis": "<string: Your brief (max 500 chars) analysis of the overall market and your current positions. This is your 'internal monologue' that will be shown to you in the next cycle to maintain your train of thought.>",
+  "actions": [
+    {
+      "signal": "buy_to_enter" | "sell_to_enter" | "close",
+      "coin": {coin_json_enum},
+      "quantity": <float>,
+      "leverage": <integer 1-20>,
+      "profit_target": <float>,
+      "stop_loss": <float>,
+      "invalidation_condition": "<string>",
+      "confidence": <float 0-1>,
+      "risk_usd": <float>,
+      "justification": "<string>"
+    }
+  ]
+}
 
 ## Output Validation Rules
 
-  - The output MUST be a valid JSON array (e.g., [], [{...}], [{...}, {...}]).
+  - The output MUST be a **single, valid JSON object** (e.g., {"portfolio_analysis": "...", "actions": []}).
+  - The *portfolio_analysis* field is **MANDATORY** and must be a string.
+  - The *actions* field is **MANDATORY** and must be an array (even if empty: []).
   - All numeric fields must be positive numbers.
   - For buy_to_enter: profit_target > entry price, stop_loss < entry price.
   - For sell_to_enter: profit_target < entry price, stop_loss > entry price.
@@ -277,6 +280,7 @@ Focus on technical analysis and risk management principles.
 4.  Verify your position sizing math (double-check calculations).
 5.  Ensure your JSON output is a valid array (even if empty: []).
 6.  Provide honest confidence scores (don't overstate conviction).
+7.  You MUST provide your overall analysis in the *portfolio_analysis* field, even if you are taking no actions (actions: []).
 
 Remember: You are trading with real money in real markets. Every decision has consequences. Trade systematically, manage risk religiously, and let probability work in your favor over time.
 
