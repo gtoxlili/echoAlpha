@@ -3,13 +3,12 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"time"
 
 	"github.com/gtoxlili/echoAlpha/collector"
 	"github.com/gtoxlili/echoAlpha/llm"
 	"github.com/gtoxlili/echoAlpha/trade"
-	// 假设你的 assetUniverse 在这里定义
-	// "github.com/gtoxlili/echoAlpha/config"
 )
 
 const klineInterval = 3 * time.Minute
@@ -31,7 +30,7 @@ func main() {
 	}
 
 	tradeManager := trade.NewManager()
-	tradeExecutor := trade.NewExecutor()
+	tradeExecutor := trade.NewExecutor(os.Getenv("BINANCE_API_KEY"), os.Getenv("BINANCE_SECRET_KEY"))
 
 	log.Printf("... 交易所: Binance, 模型: %s", "doubao-seed-1-6-251015")
 	log.Printf("... 初始资本: $%.2f", startingCapital)
