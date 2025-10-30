@@ -59,7 +59,7 @@ func main() {
 			switch action.Signal {
 			case "buy_to_enter", "sell_to_enter":
 				log.Printf("AI decision: Open %s %s", action.Signal, action.Coin)
-				execErr := tradeExecutor.Order(action)
+				execErr := tradeExecutor.Order(ctx, action)
 				if execErr == nil {
 					tradeManager.Add(action)
 				} else {
@@ -67,7 +67,7 @@ func main() {
 				}
 			case "close":
 				log.Printf("AI decision: Close %s", action.Coin)
-				execErr := tradeExecutor.CloseOrder(action.Coin)
+				execErr := tradeExecutor.CloseOrder(ctx, action.Coin)
 				if execErr == nil {
 					tradeManager.Remove(action.Coin)
 				} else {
