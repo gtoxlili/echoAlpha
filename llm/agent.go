@@ -19,8 +19,15 @@ type Agent struct {
 	systemPrompt string
 }
 
-func NewAgent(exchange string, coins []string, modelName string) (*Agent, error) {
-	systemPrompt := prompts.BuildSystemPrompt(exchange, coins, modelName)
+func NewAgent(exchange string, coins []string, modelName string, startingCapital float64) (*Agent, error) {
+	systemPrompt := prompts.BuildSystemPrompt(
+		exchange,
+		coins,
+		modelName,
+		startingCapital,
+		"Every 5-10 minutes (mid-to-low frequency trading)",
+		20,
+	)
 
 	client, err := resolveClient(modelName)
 	if err != nil {

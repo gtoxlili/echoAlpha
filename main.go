@@ -14,8 +14,9 @@ func main() {
 	defer cancel()
 
 	provider := collector.ResolveCollector("Binance", assetUniverse)
+	startingCapital := provider.GetStartingCapital()
 
-	agent, err := llm.NewAgent("Binance", assetUniverse, "doubao-seed-1-6-251015")
+	agent, err := llm.NewAgent("Binance", assetUniverse, "doubao-seed-1-6-251015", startingCapital)
 	if err != nil {
 		panic(err)
 	}

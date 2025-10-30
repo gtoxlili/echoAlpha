@@ -8,6 +8,10 @@ import (
 
 type mockProvider struct{}
 
+func (mp *mockProvider) GetStartingCapital() float64 {
+	return 10000.00
+}
+
 func (mp *mockProvider) AssemblePromptData(
 	ctx context.Context,
 ) (entity.PromptData, error) {

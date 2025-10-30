@@ -9,6 +9,7 @@ import (
 
 type StateProvider interface {
 	AssemblePromptData(ctx context.Context) (entity.PromptData, error)
+	GetStartingCapital() float64
 }
 
 func ResolveCollector(exchange string, coins []string) StateProvider {

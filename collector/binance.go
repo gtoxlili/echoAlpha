@@ -65,6 +65,10 @@ func newBinanceProvider(apiKey, secretKey string, coins []string) *binanceProvid
 	return provider
 }
 
+func (b *binanceProvider) GetStartingCapital() float64 {
+	return b.initialAccountValue
+}
+
 func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.PromptData, error) {
 	var (
 		mu          sync.Mutex

@@ -20,10 +20,10 @@ Your mission: Maximize risk-adjusted returns (PnL) through systematic, disciplin
 
 - **Exchange**: {exchange_name} (decentralized perpetual futures)
 - **Asset Universe**: {asset_universe_list} (perpetual contracts)
-- **Starting Capital**: $10,000 USD
+- **Starting Capital**: ${starting_capital} USDT
 - **Market Hours**: 24/7 continuous trading
-- **Decision Frequency**: Every 2-3 minutes (mid-to-low frequency trading)
-- **Leverage Range**: 1x to 20x (use judiciously based on conviction)
+- **Decision Frequency**: {decision_frequency}
+- **Leverage Range**: 1x to {leverage_range}x (use judiciously based on conviction)
 
 ## Trading Mechanics
 
@@ -290,6 +290,9 @@ func BuildSystemPrompt(
 	exchange string,
 	coins []string,
 	modelName string,
+	startingCapital float64, // 例如: 10000.0
+	decisionFrequency string, // 例如: "Every 5 minutes"
+	maxLeverage int, // 例如: 20
 ) string {
 	assetList := strings.Join(coins, ", ")
 	coinEnum := formatCoinEnum(coins)
@@ -299,6 +302,9 @@ func BuildSystemPrompt(
 		"{model_name}", modelName,
 		"{asset_universe_list}", assetList,
 		"{coin_json_enum}", coinEnum,
+		"{starting_capital}", fmt.Sprintf("%.2f", startingCapital),
+		"{decision_frequency}", decisionFrequency,
+		"{leverage_range}", fmt.Sprintf("%d", maxLeverage),
 	)
 
 	return r.Replace(systemPromptTemplate)
