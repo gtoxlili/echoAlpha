@@ -2,7 +2,10 @@ package prompts
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
+
+	"github.com/gtoxlili/echoAlpha/config"
 )
 
 const systemPromptTemplate = `# ROLE & IDENTITY
@@ -254,8 +257,8 @@ Do NOT confuse the order. This is a common error that leads to incorrect decisio
 # CONTEXT WINDOW MANAGEMENT
 
 You have limited context. The prompt contains:
-- ~10 recent data points per indicator (3-minute intervals)
-- ~10 recent data points for 4-hour timeframe
+- ~{series_length} recent data points per indicator (3-minute intervals)
+- ~{series_length} recent data points for 4-hour timeframe
 - Current account state and open positions
 
 Optimize your analysis:
@@ -320,6 +323,7 @@ func BuildSystemPrompt(
 		"{starting_capital}", fmt.Sprintf("%.2f", startingCapital),
 		"{decision_frequency}", decisionFrequency,
 		"{leverage_range}", fmt.Sprintf("%dx to %dx", minLeverage, maxLeverage),
+		"{series_length}", strconv.Itoa(config.SeriesLength),
 	)
 
 	return r.Replace(systemPromptTemplate)
