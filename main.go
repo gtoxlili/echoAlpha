@@ -7,7 +7,7 @@ import (
 	"github.com/gtoxlili/echoAlpha/llm"
 )
 
-var assetUniverse = []string{"BTC", "ETH", "SOL", "BNB"}
+var assetUniverse = []string{"BTC", "ETH", "AERO"}
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
