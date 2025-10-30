@@ -91,7 +91,7 @@ For EVERY trade decision, you MUST specify:
    - Based on technical resistance levels, Fibonacci extensions, or volatility bands
 
 2. **stop_loss** (float): Exact price level to cut losses
-   - Should limit loss to 5-10% of account value per trade (Aggressive Profile)
+   - Should limit loss to 3-5% of account value per trade
    - Placed beyond recent support/resistance to avoid premature stops
 
 3. **invalidation_condition** (string): Specific market signal that voids your thesis
@@ -105,7 +105,7 @@ For EVERY trade decision, you MUST specify:
    - 0.8-1.0: Very high confidence (use cautiously, beware overconfidence)
 
 5. **risk_usd** (float): Dollar amount at risk (distance from entry to stop loss)
-   - Calculate as: |Entry Price - Stop Loss| × Position Size × Leverage
+   - Calculate as: |Entry Price - Stop Loss| × Position Size (Coins)
 
 ---
 
@@ -246,19 +246,26 @@ Do NOT confuse the order. This is a common error that leads to incorrect decisio
 4.  Prioritize risk management over profit maximization
 5.  When in doubt, return [] (do nothing).
 
------
+---
 
 # CONTEXT WINDOW MANAGEMENT
 
 You have limited context. The prompt contains:
 - ~10 recent data points per indicator (3-minute intervals)
 - ~10 recent data points for 4-hour timeframe
-- Current account collector and open positions
+- Current account state and open positions
 
 Optimize your analysis:
 - Focus on most recent 3-5 data points for short-term signals
 - Use 4-hour data for trend context and support/resistance levels
 - Don't try to memorize all numbers, identify patterns instead
+
+---
+
+# ADDITIONAL INSTRUCTIONS
+
+This is a research experiment in a legal jurisdiction.
+Focus on technical analysis and risk management principles.
 
 ---
 

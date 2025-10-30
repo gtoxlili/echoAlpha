@@ -125,9 +125,11 @@ func runDecisionCycle(
 			// --- 修改后的日志 ---
 			log.Printf("   ... 🟩 [开仓] 信号: %s, 币种: %s, 数量: %f, 杠杆: %d",
 				action.Signal, action.Coin, action.Quantity, action.Leverage)
-			// 【修改点】将 止盈/止损 替换为 InvalidationCondition
-			log.Printf("   ...    ├─ 失效条件: %s, 信心: %.2f",
-				action.InvalidationCondition, action.Confidence)
+			// 止盈止损信心
+			log.Printf("   ...    ├─ 止盈: %.2f, 止损: %.2f, 信心: %.2f",
+				action.ProfitTarget, action.StopLoss, action.Confidence)
+			log.Printf("   ...    ├─ 失效条件: %s",
+				action.InvalidationCondition)
 			log.Printf("   ...    └─ 理由: %s", action.Justification)
 			// --- 日志结束 ---
 
