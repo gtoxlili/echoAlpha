@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gtoxlili/echoAlpha/config"
 	"github.com/gtoxlili/echoAlpha/entity"
 )
 
@@ -16,7 +17,7 @@ type Manager struct {
 
 func NewManager() *Manager {
 	return &Manager{
-		openPositions: make(map[string]entity.TradeMetadata),
+		openPositions: config.AppPersistence.OpenPositions,
 	}
 }
 

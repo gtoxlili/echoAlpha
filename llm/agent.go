@@ -41,7 +41,7 @@ func NewAgent(exchange string, coins []string, modelName string, startingCapital
 		client:                client,
 		model:                 modelName,
 		systemPrompt:          systemPrompt,
-		lastPortfolioAnalysis: "No positions are open and no prior analysis exists. The market is a blank slate. My immediate goal is to analyze the full dataset provided, establish a market baseline, and find a single, high-quality entry point that aligns with the risk management protocol.",
+		lastPortfolioAnalysis: config.AppPersistence.PortfolioAnalysis,
 	}, nil
 }
 
