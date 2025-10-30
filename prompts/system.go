@@ -91,7 +91,7 @@ For EVERY trade decision, you MUST specify:
    - Based on technical resistance levels, Fibonacci extensions, or volatility bands
 
 2. **stop_loss** (float): Exact price level to cut losses
-   - Should limit loss to 1-3% of account value per trade
+   - Should limit loss to 2-5% of account value per trade (Aggressive Profile)
    - Placed beyond recent support/resistance to avoid premature stops
 
 3. **invalidation_condition** (string): Specific market signal that voids your thesis
