@@ -213,7 +213,7 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 		// 填充 Intraday 结构
 		data.Intraday.Prices3m = lo.Subset(prices3m, -seriesLength, uint(seriesLength))
 		data.Intraday.Ema203m = lo.Subset(ema203m, -seriesLength, uint(seriesLength))
-		data.Intraday.Macd3m = lo.Subset(macd3m, -seriesLength, uint(seriesLength))
+		data.Intraday.MACD3m = lo.Subset(macd3m, -seriesLength, uint(seriesLength))
 		data.Intraday.Rsi73m = lo.Subset(rsi73m, -seriesLength, uint(seriesLength))
 		data.Intraday.Rsi143m = lo.Subset(rsi143m, -seriesLength, uint(seriesLength))
 
@@ -249,7 +249,7 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 		data.LongTerm.VolAvg = lo.Sum(vol4h) / float64(len(vol4h))
 
 		// 只修改序列数据
-		data.LongTerm.Macd4h = lo.Subset(macd4h, -seriesLength, uint(seriesLength))
+		data.LongTerm.MACD4h = lo.Subset(macd4h, -seriesLength, uint(seriesLength))
 		data.LongTerm.Rsi144h = lo.Subset(rsi144h, -seriesLength, uint(seriesLength))
 
 		return nil

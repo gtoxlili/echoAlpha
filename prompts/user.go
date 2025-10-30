@@ -146,10 +146,10 @@ func buildAllCoinsBlock(coins map[string]entity.CoinData) string {
 	for symbol, coinData := range coins {
 		prices3mStr := formatFloatSlice(coinData.Prices3m)
 		ema20_3mStr := formatFloatSlice(coinData.Ema203m)
-		macd3mStr := formatFloatSlice(coinData.Macd3m)
+		macd3mStr := formatFloatSlice(coinData.MACD3m)
 		rsi7_3mStr := formatFloatSlice(coinData.Rsi73m)
 		rsi14_3mStr := formatFloatSlice(coinData.Rsi143m)
-		macd4hStr := formatFloatSlice(coinData.Macd4h)
+		macd4hStr := formatFloatSlice(coinData.MACD4h)
 		rsi14_4hStr := formatFloatSlice(coinData.Rsi144h)
 
 		r := strings.NewReplacer(

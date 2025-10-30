@@ -36,7 +36,7 @@ type OIFunding struct {
 type Intraday struct {
 	Prices3m []float64 `json:"prices_3m"`
 	Ema203m  []float64 `json:"ema_20_3m"`
-	Macd3m   []float64 `json:"macd_3m"`
+	MACD3m   []float64 `json:"macd_3m"`
 	Rsi73m   []float64 `json:"rsi_7_3m"`
 	Rsi143m  []float64 `json:"rsi_14_3m"`
 }
@@ -49,7 +49,7 @@ type LongTerm struct {
 	Atr144h float64   `json:"atr_14_4h"`
 	VolCurr float64   `json:"vol_curr"`
 	VolAvg  float64   `json:"vol_avg"`
-	Macd4h  []float64 `json:"macd_4h"`
+	MACD4h  []float64 `json:"macd_4h"`
 	Rsi144h []float64 `json:"rsi_14_4h"`
 }
 
