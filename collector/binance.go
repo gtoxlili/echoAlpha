@@ -122,7 +122,6 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 
 		if err != nil {
 			log.Printf("error fetching positions data: %v", err)
-			return nil // 记录日志但不中断
 		}
 		return nil
 	})
@@ -135,7 +134,12 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 		MinutesElapsed: time.Since(b.createdAt).Minutes(),
 		Coins:          coinDataMap,
 		Account:        accountData,
-		Positions:      positions,
+		Positions: lo.Map(positions, func(p entity.PositionData, _ int) entity.PositionData {
+			if coinData, exists := coinDataMap[p.Symbol]; exists {
+				p.CurrentPrice = coinData.Price
+			}
+			return p
+		}),
 	}, nil
 }
 
