@@ -18,7 +18,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// --- 优化点 1: 将魔术字符串和数字常量化 ---
 const (
 	usdtSuffix = "USDT"
 	// seriesLength 是我们为提示词中的时间序列数据（如MACD, RSI）保留的长度
@@ -98,7 +97,6 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 	}, nil
 }
 
-// --- 优化点 3: 重命名为 fetchAndParseKlines ---
 // fetchAndParseKlines 获取K线数据并将其解析为 float64 切片
 func (b *binanceProvider) fetchAndParseKlines(ctx context.Context, symbol, interval string, limit int) (
 	klines []*futures.Kline, high, low, close, volume []float64, err error,
@@ -128,7 +126,6 @@ func (b *binanceProvider) fetchAndParseKlines(ctx context.Context, symbol, inter
 }
 
 // fetchOIFundingData 获取持仓量和资金费率
-// 注意：这会发起3次API调用
 func (b *binanceProvider) fetchOIFundingData(ctx context.Context, symbol string) (entity.OIFunding, error) {
 	var result entity.OIFunding
 	var g errgroup.Group // 'eg' -> 'g'
@@ -191,7 +188,6 @@ func (b *binanceProvider) fetchOIFundingData(ctx context.Context, symbol string)
 }
 
 // fetchCoinData 为单个代币获取所有需要的数据
-// 它在内部并行执行所有网络请求
 func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (entity.CoinData, error) {
 	var data entity.CoinData
 	var g, gctx = errgroup.WithContext(ctx) // 'eg' -> 'g'
