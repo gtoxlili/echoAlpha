@@ -13,6 +13,7 @@ import (
 	"github.com/adshao/go-binance/v2"
 	"github.com/adshao/go-binance/v2/futures"
 	"github.com/cinar/indicator"
+	"github.com/gtoxlili/echoAlpha/config"
 	"github.com/gtoxlili/echoAlpha/entity"
 	"github.com/gtoxlili/echoAlpha/utils"
 	"github.com/samber/lo"
@@ -20,14 +21,7 @@ import (
 )
 
 const (
-	usdtSuffix          = "USDT"
-	seriesLength        = 10
-	klineInterval3m     = "3m"
-	klineInterval4h     = "4h"
-	klineLimit          = 100
-	oiPeriod            = "5m"
-	oiLimit             = 288
-	maxHistoricalValues = 1 >> 10 // 最多存储 1024 个历史账户总价值数据点
+	usdtSuffix = "USDT"
 )
 
 type binanceProvider struct {
@@ -166,7 +160,8 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 	})
 
 	g.Go(func() error {
-		_, _, _, close3m, _, err := b.fetchAndParseKlines(gctx, symbol, klineInterval3m, klineLimit)
+		interval := fmt.Sprintf("%.0fm", config.KlineInterval.Minutes())
+		_, _, _, close3m, _, err := b.fetchAndParseKlines(gctx, symbol, interval, config.KlineLimit)
 		if err != nil {
 			return fmt.Errorf("failed to fetch 3m klines for %s: %w", symbol, err)
 		}
@@ -176,11 +171,11 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 		_, rsi73m := indicator.RsiPeriod(7, close3m)
 		_, rsi143m := indicator.RsiPeriod(14, close3m)
 
-		data.Intraday.Prices3m = lo.Subset(close3m, -seriesLength, uint(seriesLength))
-		data.Intraday.Ema203m = lo.Subset(ema203m, -seriesLength, uint(seriesLength))
-		data.Intraday.MACD3m = lo.Subset(macd3m, -seriesLength, uint(seriesLength))
-		data.Intraday.Rsi73m = lo.Subset(rsi73m, -seriesLength, uint(seriesLength))
-		data.Intraday.Rsi143m = lo.Subset(rsi143m, -seriesLength, uint(seriesLength))
+		data.Intraday.Prices3m = lo.Subset(close3m, -config.SeriesLength, uint(config.SeriesLength))
+		data.Intraday.Ema203m = lo.Subset(ema203m, -config.SeriesLength, uint(config.SeriesLength))
+		data.Intraday.MACD3m = lo.Subset(macd3m, -config.SeriesLength, uint(config.SeriesLength))
+		data.Intraday.Rsi73m = lo.Subset(rsi73m, -config.SeriesLength, uint(config.SeriesLength))
+		data.Intraday.Rsi143m = lo.Subset(rsi143m, -config.SeriesLength, uint(config.SeriesLength))
 
 		data.EMA20 = lo.LastOrEmpty(ema203m)
 		data.MACD = lo.LastOrEmpty(macd3m)
@@ -190,7 +185,8 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 	})
 
 	g.Go(func() error {
-		_, high4h, low4h, close4h, vol4h, err := b.fetchAndParseKlines(gctx, symbol, klineInterval4h, klineLimit)
+		interval := fmt.Sprintf("%.0fh", config.KlineIntervalLonger.Hours())
+		_, high4h, low4h, close4h, vol4h, err := b.fetchAndParseKlines(gctx, symbol, interval, config.KlineLimit)
 		if err != nil {
 			return fmt.Errorf("failed to fetch 4h klines for %s: %w", symbol, err)
 		}
@@ -209,8 +205,8 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 		data.LongTerm.VolCurr = lo.LastOrEmpty(vol4h)
 		data.LongTerm.VolAvg = lo.Sum(vol4h) / float64(len(vol4h))
 
-		data.LongTerm.MACD4h = lo.Subset(macd4h, -seriesLength, uint(seriesLength))
-		data.LongTerm.Rsi144h = lo.Subset(rsi144h, -seriesLength, uint(seriesLength))
+		data.LongTerm.MACD4h = lo.Subset(macd4h, -config.SeriesLength, uint(config.SeriesLength))
+		data.LongTerm.Rsi144h = lo.Subset(rsi144h, -config.SeriesLength, uint(config.SeriesLength))
 
 		return nil
 	})
@@ -281,7 +277,7 @@ func (b *binanceProvider) fetchOIFundingData(ctx context.Context, symbol string)
 	})
 
 	g.Go(func() error {
-		hist, err := b.client.NewOpenInterestStatisticsService().Symbol(symbol).Period(oiPeriod).Limit(oiLimit).Do(ctx)
+		hist, err := b.client.NewOpenInterestStatisticsService().Symbol(symbol).Period(config.OiPeriod).Limit(config.OiLimit).Do(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to fetch open interest history: %w", err)
 		}
@@ -357,7 +353,7 @@ func (b *binanceProvider) fetchAccountData(ctx context.Context) (entity.AccountD
 	defer b.historicalMu.Unlock()
 
 	b.historicalAccountValues = append(b.historicalAccountValues, currentValue)
-	if len(b.historicalAccountValues) > maxHistoricalValues {
+	if len(b.historicalAccountValues) > config.MaxHistoricalValues {
 		b.historicalAccountValues = b.historicalAccountValues[1:]
 	}
 
