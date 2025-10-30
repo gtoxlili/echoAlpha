@@ -21,7 +21,7 @@ import (
 
 const (
 	usdtSuffix          = "USDT"
-	seriesLength        = 30
+	seriesLength        = 10
 	klineInterval3m     = "3m"
 	klineInterval4h     = "4h"
 	klineLimit          = 100

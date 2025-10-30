@@ -14,7 +14,7 @@ import (
 const klineInterval = 3 * time.Minute
 
 // 假设 assetUniverse 在这里定义，或者从配置加载
-var assetUniverse = []string{"BTC", "ETH", "AERO", "BNB"}
+var assetUniverse = []string{"BTC", "ETH", "AERO", "BNB", "SOL"}
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
