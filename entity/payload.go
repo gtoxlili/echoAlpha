@@ -74,6 +74,7 @@ type PositionData struct {
 	Confidence    float64      `json:"confidence"`
 	RiskUSD       float64      `json:"risk_usd"`
 	NotionalUSD   float64      `json:"notional_usd"`
+	AgeInMinutes  float64      `json:"age_in_minutes"` // <-- 新增：持仓时间
 }
 
 // ExitPlanData 包含仓位的退出策略

@@ -56,7 +56,7 @@ func (a *Agent) RunAnalysis(
 		ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{
 			OfJSONObject: lo.ToPtr(shared.NewResponseFormatJSONObjectParam()),
 		},
-		ReasoningEffort: openai.ReasoningEffortHigh,
+		ReasoningEffort: openai.ReasoningEffortMinimal,
 	}
 
 	completion, err := a.client.Chat.Completions.New(ctx, param)
