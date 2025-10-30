@@ -20,30 +20,47 @@ import (
 )
 
 const (
-	usdtSuffix      = "USDT"
-	seriesLength    = 30
-	klineInterval3m = "3m"
-	klineInterval4h = "4h"
-	klineLimit      = 100
-	oiPeriod        = "5m"
-	oiLimit         = 288
+	usdtSuffix          = "USDT"
+	seriesLength        = 30
+	klineInterval3m     = "3m"
+	klineInterval4h     = "4h"
+	klineLimit          = 100
+	oiPeriod            = "5m"
+	oiLimit             = 288
+	maxHistoricalValues = 1000 // <--- 新增：限制历史数据的最大数量
 )
 
 type binanceProvider struct {
 	client    *futures.Client
 	coins     []string
 	createdAt time.Time
+	// <--- 新增字段 ---
+	// 存储历史账户总价值，用于计算 Pct 和 Sharpe
+	historicalAccountValues []float64
+	historicalMu            sync.RWMutex // 用于保护 slice 的读写
 }
 
 func newBinanceProvider(apiKey, secretKey string, coins []string) *binanceProvider {
-	futuresClient := binance.NewFuturesClient(apiKey, secretKey)
-	return &binanceProvider{
-		client: futuresClient,
+	provider := &binanceProvider{
+		client: binance.NewFuturesClient(apiKey, secretKey),
 		coins: lo.Map(coins, func(coin string, _ int) string {
 			return strings.ToUpper(coin) + usdtSuffix
 		}),
 		createdAt: time.Now(),
 	}
+
+	res, err := provider.client.NewGetAccountService().Do(context.Background())
+	if err != nil {
+		panic(err)
+	}
+
+	initialAmount, err := strconv.ParseFloat(res.TotalWalletBalance, 64)
+	if err != nil {
+		panic(err)
+	}
+	provider.historicalAccountValues = []float64{initialAmount}
+
+	return provider
 }
 
 func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.PromptData, error) {
@@ -285,11 +302,12 @@ func (b *binanceProvider) fetchAccountData(ctx context.Context) (entity.AccountD
 	var data entity.AccountData
 	var parseErr error
 
-	// AccountValue 对应账户总钱包余额
-	data.AccountValue, parseErr = strconv.ParseFloat(res.TotalWalletBalance, 64)
+	// 1. 解析当前账户总价值
+	currentValue, parseErr := strconv.ParseFloat(res.TotalWalletBalance, 64)
 	if parseErr != nil {
-		return lo.Empty[entity.AccountData](), fmt.Errorf("error parsing TotalWalletBalance: %v", parseErr)
+		return lo.Empty[entity.AccountData](), fmt.Errorf("failed to parse TotalWalletBalance: %w", parseErr)
 	}
+	data.AccountValue = currentValue
 
 	// CashAvailable 对应 USDT 资产的可用余额
 	// 我们使用 lo.Find 在资产列表中查找 "USDT"
@@ -306,8 +324,64 @@ func (b *binanceProvider) fetchAccountData(ctx context.Context) (entity.AccountD
 		data.CashAvailable = 0.0
 	}
 
-	data.ReturnPct = 0.0
-	data.SharpeRatio = 0.0
+	// 3. 锁定、更新历史数据并执行计算
+	b.historicalMu.Lock()
+	defer b.historicalMu.Unlock()
+
+	// 4. 添加新值，并修剪 slice (如果需要)
+	b.historicalAccountValues = append(b.historicalAccountValues, currentValue)
+	if len(b.historicalAccountValues) > maxHistoricalValues {
+		// 移除最旧的一个元素
+		b.historicalAccountValues = b.historicalAccountValues[1:]
+	}
+
+	// 5. 计算总回报率 (ReturnPct)
+	initialValue := b.historicalAccountValues[0]
+	if initialValue > 0 {
+		data.ReturnPct = (currentValue - initialValue) / initialValue
+	} else {
+		data.ReturnPct = 0.0
+	}
+
+	// 6. 计算夏普比率 (SharpeRatio)
+	data.SharpeRatio = b.calculateSharpeRatio() // 使用下面的新辅助函数
 
 	return data, nil
+}
+
+// calculateSharpeRatio 是一个 binanceProvider 的方法
+// 注意：此函数假定在调用它之前已经获取了 b.historicalMu 的锁！
+func (b *binanceProvider) calculateSharpeRatio() float64 {
+	values := b.historicalAccountValues
+
+	// 至少需要3个数据点才能计算2个回报率，从而计算标准差
+	if len(values) < 3 {
+		return 0.0
+	}
+
+	// 1. 计算回报率序列
+	// (P1-P0)/P0, (P2-P1)/P1, ...
+	returns := make([]float64, len(values)-1)
+	for i := 1; i < len(values); i++ {
+		if values[i-1] == 0 { // 避免除以零
+			returns[i-1] = 0.0
+			continue
+		}
+		returns[i-1] = (values[i] - values[i-1]) / values[i-1]
+	}
+
+	// 2. 计算回报率的平均值
+	avgReturn := utils.Avg(returns)
+
+	// 3. 计算回报率的标准差
+	stdDevReturn := utils.StdDev(returns)
+
+	// 4. 计算夏普比率
+	// Sharpe = (Average Return - Risk-Free Rate) / Standard Deviation
+	// 我们假设 Risk-Free Rate (无风险利率) 为 0，这在短周期交易中很常见
+	if stdDevReturn == 0 {
+		return 0.0 // 避免除以零
+	}
+
+	return avgReturn / stdDevReturn
 }

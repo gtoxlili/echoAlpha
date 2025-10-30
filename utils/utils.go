@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"time"
 	"unsafe"
@@ -62,4 +63,28 @@ func RetryWithBackoff[T any](op func() (T, error), maxRetries int) (T, error) {
 	}
 
 	return lo.Empty[T](), fmt.Errorf("after %d retries, last error: %w", maxRetries, lastErr)
+}
+
+func Avg(data []float64) float64 {
+	if len(data) == 0 {
+		return 0.0
+	}
+	return lo.Sum(data) / float64(len(data))
+}
+
+func StdDev(data []float64) float64 {
+	// 至少需要2个点才能计算标准差
+	if len(data) < 2 {
+		return 0.0
+	}
+
+	mean := Avg(data)
+	sumOfSquares := 0.0
+	for _, val := range data {
+		sumOfSquares += math.Pow(val-mean, 2)
+	}
+
+	// 使用样本标准差 (n-1)
+	variance := sumOfSquares / float64(len(data)-1)
+	return math.Sqrt(variance)
 }
