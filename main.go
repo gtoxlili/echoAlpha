@@ -30,7 +30,7 @@ func main() {
 	}
 
 	tradeManager := trade.NewManager()
-	tradeExecutor := trade.NewExecutor(os.Getenv("BINANCE_API_KEY"), os.Getenv("BINANCE_SECRET_KEY"))
+	tradeExecutor := trade.NewExecutor(os.Getenv("BINANCE_API_KEY"), os.Getenv("BINANCE_API_SECRET"))
 
 	log.Printf("... 交易所: Binance, 模型: %s", "doubao-seed-1-6-251015")
 	log.Printf("... 初始资本: $%.2f", startingCapital)
