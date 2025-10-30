@@ -17,6 +17,8 @@ const (
 	MaxLeverage       = 20
 
 	LLMTemperature = 0.6
+
+	PersistencePath = ".echo-alpha-persistence.json"
 )
 
 var (

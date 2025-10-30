@@ -20,7 +20,7 @@ var (
 
 func init() {
 	// 从配置文件中获取
-	file, err := os.Open(".echo-alpha-persistence.json")
+	file, err := os.Open(PersistencePath)
 	if err != nil {
 		AppPersistence = defaultPersistence()
 		return
@@ -42,7 +42,7 @@ func SavePortfolioPersistence(portfolioAnalysis string) error {
 	mu.Lock()
 	defer mu.Unlock()
 	AppPersistence.PortfolioAnalysis = portfolioAnalysis
-	file, err := os.OpenFile(".echo-alpha-persistence.json", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(PersistencePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func SaveOpenPositions(openPositions map[string]entity.TradeMetadata) error {
 	mu.Lock()
 	defer mu.Unlock()
 	AppPersistence.OpenPositions = openPositions
-	file, err := os.OpenFile(".echo-alpha-persistence.json", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(PersistencePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
