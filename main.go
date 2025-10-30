@@ -6,31 +6,26 @@ import (
 	"time"
 
 	"github.com/gtoxlili/echoAlpha/collector"
-	"github.com/gtoxlili/echoAlpha/constant"
+	"github.com/gtoxlili/echoAlpha/config"
 	"github.com/gtoxlili/echoAlpha/llm"
 	"github.com/gtoxlili/echoAlpha/trade"
 )
-
-const klineInterval = 3 * time.Minute
-
-// 假设 assetUniverse 在这里定义，或者从配置加载
-var assetUniverse = []string{"BTC", "ETH", "AERO", "BNB", "SOL"}
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	log.Println("🤖 交易机器人启动...")
-	provider := collector.ResolveCollector("Binance", assetUniverse)
+	provider := collector.ResolveCollector("Binance", config.AssetUniverse)
 	startingCapital := provider.GetStartingCapital()
 
-	agent, err := llm.NewAgent("Binance", assetUniverse, "doubao-seed-1-6-251015", startingCapital)
+	agent, err := llm.NewAgent("Binance", config.AssetUniverse, "doubao-seed-1-6-251015", startingCapital)
 	if err != nil {
 		log.Panicf("❌ [初始化] 致命错误: 无法创建 AI Agent: %v", err)
 	}
 
 	tradeManager := trade.NewManager()
-	tradeExecutor, err := trade.NewExecutor(constant.BINANCE_API_KEY, constant.BINANCE_API_SECRET)
+	tradeExecutor, err := trade.NewExecutor(config.BINANCE_API_KEY, config.BINANCE_API_SECRET)
 	if err != nil {
 		log.Panicf("❌ [初始化] 致命错误: 无法创建 Trade Executor: %v", err)
 	}
@@ -40,7 +35,7 @@ func main() {
 	log.Printf("... 决策周期: 3 分钟")
 
 	now := time.Now()
-	nextTickTime := now.Truncate(klineInterval).Add(klineInterval)
+	nextTickTime := now.Truncate(config.KlineInterval).Add(config.KlineInterval)
 	durationToWait := time.Until(nextTickTime)
 	log.Printf("... 当前时间: %s", now.Format("2006-01-02 15:04:05"))
 	log.Printf("... K线对齐: 等待 %v, 将在 %s 执行首次分析...", durationToWait.Round(time.Second), nextTickTime.Format("15:04:05"))
@@ -158,7 +153,7 @@ func runDecisionCycle(
 }
 
 func delay(ctx context.Context) error {
-	next := time.Now().Truncate(klineInterval).Add(klineInterval)
+	next := time.Now().Truncate(config.KlineInterval).Add(config.KlineInterval)
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
