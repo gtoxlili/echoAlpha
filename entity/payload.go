@@ -35,22 +35,22 @@ type OIFunding struct {
 // Intraday 包含短线（3分钟）时间框架数据
 type Intraday struct {
 	Prices3m []float64 `json:"prices_3m"`
-	EMA20_3m []float64 `json:"ema_20_3m"`
-	MACD_3m  []float64 `json:"macd_3m"`
-	RSI7_3m  []float64 `json:"rsi_7_3m"`
-	RSI14_3m []float64 `json:"rsi_14_3m"`
+	Ema203m  []float64 `json:"ema_20_3m"`
+	Macd3m   []float64 `json:"macd_3m"`
+	Rsi73m   []float64 `json:"rsi_7_3m"`
+	Rsi143m  []float64 `json:"rsi_14_3m"`
 }
 
 // LongTerm 包含长线（4小时）时间框架数据
 type LongTerm struct {
-	EMA20_4h float64   `json:"ema_20_4h"`
-	EMA50_4h float64   `json:"ema_50_4h"`
-	ATR3_4h  float64   `json:"atr_3_4h"`
-	ATR14_4h float64   `json:"atr_14_4h"`
-	VolCurr  float64   `json:"vol_curr"`
-	VolAvg   float64   `json:"vol_avg"`
-	MACD_4h  []float64 `json:"macd_4h"`
-	RSI14_4h []float64 `json:"rsi_14_4h"`
+	Ema204h float64   `json:"ema_20_4h"`
+	Ema504h float64   `json:"ema_50_4h"`
+	Atr34h  float64   `json:"atr_3_4h"`
+	Atr144h float64   `json:"atr_14_4h"`
+	VolCurr float64   `json:"vol_curr"`
+	VolAvg  float64   `json:"vol_avg"`
+	Macd4h  []float64 `json:"macd_4h"`
+	Rsi144h []float64 `json:"rsi_14_4h"`
 }
 
 // AccountData 包含账户绩效和余额

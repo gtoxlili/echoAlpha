@@ -203,24 +203,24 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 		}
 
 		// 计算指标
-		ema20_3m := indicator.Ema(20, prices3m)
-		macd_3m, _ := indicator.Macd(prices3m)
-		_, rsi7_3m := indicator.RsiPeriod(7, prices3m)
-		_, rsi14_3m := indicator.RsiPeriod(14, prices3m)
+		ema203m := indicator.Ema(20, prices3m)
+		macd3m, _ := indicator.Macd(prices3m)
+		_, rsi73m := indicator.RsiPeriod(7, prices3m)
+		_, rsi143m := indicator.RsiPeriod(14, prices3m)
 
 		const seriesLength = 30
 
 		// 填充 Intraday 结构
 		data.Intraday.Prices3m = lo.Subset(prices3m, -seriesLength, uint(seriesLength))
-		data.Intraday.EMA20_3m = lo.Subset(ema20_3m, -seriesLength, uint(seriesLength))
-		data.Intraday.MACD_3m = lo.Subset(macd_3m, -seriesLength, uint(seriesLength))
-		data.Intraday.RSI7_3m = lo.Subset(rsi7_3m, -seriesLength, uint(seriesLength))
-		data.Intraday.RSI14_3m = lo.Subset(rsi14_3m, -seriesLength, uint(seriesLength))
+		data.Intraday.Ema203m = lo.Subset(ema203m, -seriesLength, uint(seriesLength))
+		data.Intraday.Macd3m = lo.Subset(macd3m, -seriesLength, uint(seriesLength))
+		data.Intraday.Rsi73m = lo.Subset(rsi73m, -seriesLength, uint(seriesLength))
+		data.Intraday.Rsi143m = lo.Subset(rsi143m, -seriesLength, uint(seriesLength))
 
 		// 填充 Snapshot 数据 (使用 3m 数据的最新值)
-		data.EMA20 = lo.LastOrEmpty(ema20_3m)
-		data.MACD = lo.LastOrEmpty(macd_3m)
-		data.RSI7 = lo.LastOrEmpty(rsi7_3m)
+		data.EMA20 = lo.LastOrEmpty(ema203m)
+		data.MACD = lo.LastOrEmpty(macd3m)
+		data.RSI7 = lo.LastOrEmpty(rsi73m)
 
 		return nil
 	})
@@ -233,24 +233,24 @@ func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (ent
 		}
 
 		// 计算指标
-		ema20_4h := indicator.Ema(20, close4h)
-		ema50_4h := indicator.Ema(50, close4h)
-		_, atr3_4h := indicator.Atr(3, high4h, low4h, close4h)   // 假设 indicator.Atr 存在
-		_, atr14_4h := indicator.Atr(14, high4h, low4h, close4h) // 假设 indicator.Atr 存在
-		macd_4h, _ := indicator.Macd(close4h)
-		_, rsi14_4h := indicator.RsiPeriod(14, close4h)
+		ema204h := indicator.Ema(20, close4h)
+		ema504h := indicator.Ema(50, close4h)
+		_, atr34h := indicator.Atr(3, high4h, low4h, close4h)   // 假设 indicator.Atr 存在
+		_, atr144h := indicator.Atr(14, high4h, low4h, close4h) // 假设 indicator.Atr 存在
+		macd4h, _ := indicator.Macd(close4h)
+		_, rsi144h := indicator.RsiPeriod(14, close4h)
 
 		// 填充 LongTerm 结构
-		data.LongTerm.EMA20_4h = lo.LastOrEmpty(ema20_4h)
-		data.LongTerm.EMA50_4h = lo.LastOrEmpty(ema50_4h)
-		data.LongTerm.ATR3_4h = lo.LastOrEmpty(atr3_4h)
-		data.LongTerm.ATR14_4h = lo.LastOrEmpty(atr14_4h)
+		data.LongTerm.Ema204h = lo.LastOrEmpty(ema204h)
+		data.LongTerm.Ema504h = lo.LastOrEmpty(ema504h)
+		data.LongTerm.Atr34h = lo.LastOrEmpty(atr34h)
+		data.LongTerm.Atr144h = lo.LastOrEmpty(atr144h)
 		data.LongTerm.VolCurr = lo.LastOrEmpty(vol4h)
 		data.LongTerm.VolAvg = lo.Sum(vol4h) / float64(len(vol4h))
 
 		// 只修改序列数据
-		data.LongTerm.MACD_4h = lo.Subset(macd_4h, -seriesLength, uint(seriesLength))
-		data.LongTerm.RSI14_4h = lo.Subset(rsi14_4h, -seriesLength, uint(seriesLength))
+		data.LongTerm.Macd4h = lo.Subset(macd4h, -seriesLength, uint(seriesLength))
+		data.LongTerm.Rsi144h = lo.Subset(rsi144h, -seriesLength, uint(seriesLength))
 
 		return nil
 	})

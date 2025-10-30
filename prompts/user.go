@@ -145,12 +145,12 @@ func buildAllCoinsBlock(coins map[string]entity.CoinData) string {
 	// 按照 assetUniverse 中定义的顺序循环
 	for symbol, coinData := range coins {
 		prices3mStr := formatFloatSlice(coinData.Prices3m)
-		ema20_3mStr := formatFloatSlice(coinData.EMA20_3m)
-		macd3mStr := formatFloatSlice(coinData.MACD_3m)
-		rsi7_3mStr := formatFloatSlice(coinData.RSI7_3m)
-		rsi14_3mStr := formatFloatSlice(coinData.RSI14_3m)
-		macd4hStr := formatFloatSlice(coinData.MACD_4h)
-		rsi14_4hStr := formatFloatSlice(coinData.RSI14_4h)
+		ema20_3mStr := formatFloatSlice(coinData.Ema203m)
+		macd3mStr := formatFloatSlice(coinData.Macd3m)
+		rsi7_3mStr := formatFloatSlice(coinData.Rsi73m)
+		rsi14_3mStr := formatFloatSlice(coinData.Rsi143m)
+		macd4hStr := formatFloatSlice(coinData.Macd4h)
+		rsi14_4hStr := formatFloatSlice(coinData.Rsi144h)
 
 		r := strings.NewReplacer(
 			"{symbol}", symbol,
@@ -166,10 +166,10 @@ func buildAllCoinsBlock(coins map[string]entity.CoinData) string {
 			"{macd_3m}", macd3mStr,
 			"{rsi7_3m}", rsi7_3mStr,
 			"{rsi14_3m}", rsi14_3mStr,
-			"{ema20_4h}", fmt.Sprintf("%.4f", coinData.EMA20_4h),
-			"{ema50_4h}", fmt.Sprintf("%.4f", coinData.EMA50_4h),
-			"{atr3_4h}", fmt.Sprintf("%.4f", coinData.ATR3_4h),
-			"{atr14_4h}", fmt.Sprintf("%.4f", coinData.ATR14_4h),
+			"{ema20_4h}", fmt.Sprintf("%.4f", coinData.Ema204h),
+			"{ema50_4h}", fmt.Sprintf("%.4f", coinData.Ema504h),
+			"{atr3_4h}", fmt.Sprintf("%.4f", coinData.Atr34h),
+			"{atr14_4h}", fmt.Sprintf("%.4f", coinData.Atr144h),
 			"{volume_current}", fmt.Sprintf("%.4f", coinData.VolCurr),
 			"{volume_avg}", fmt.Sprintf("%.4f", coinData.VolAvg),
 			"{macd_4h}", macd4hStr,
