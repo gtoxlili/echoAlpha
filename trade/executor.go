@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"strconv"
+	"strings"
 
 	"github.com/adshao/go-binance/v2/futures"
 	"github.com/gtoxlili/echoAlpha/entity"
@@ -15,20 +16,45 @@ const (
 	usdtSuffix = "USDT"
 )
 
-type Executor struct {
-	client *futures.Client
+// SymbolPrecisions 用于存储从 /exchangeInfo 获取的精度规则
+type SymbolPrecisions struct {
+	QuantityPrecision int // 数量精度 (e.g., 3 -> 0.001)
+	PricePrecision    int // 价格精度 (e.g., 2 -> 0.01)
 }
 
-// NewExecutor 必须接收 API key 和 secret key 才能执行交易。
-// 你的主程序 main.go 需要修改为:
-// tradeExecutor := trade.NewExecutor(os.Getenv("BINANCE_API_KEY"), os.Getenv("BINANCE_SECRET_KEY"))
-func NewExecutor(apiKey, secretKey string) *Executor {
+type Executor struct {
+	client *futures.Client
+	// precisions 缓存了所有交易对的精度规则
+	precisions map[string]SymbolPrecisions // key: symbol (e.g., "BTCUSDT")
+}
+
+// ---------------- 修改 NewExecutor ----------------
+
+// NewExecutor 现在会获取并缓存精度规则，并且会返回一个 error
+// 你的 main.go 必须修改为:
+// tradeExecutor, err := trade.NewExecutor(os.Getenv("BINANCE_API_KEY"), os.Getenv("BINANCE_SECRET_KEY"))
+//
+//	if err != nil {
+//	   log.Panicf("❌ [初始化] 致命错误: 无法创建 Executor: %v", err)
+//	}
+func NewExecutor(apiKey, secretKey string) (*Executor, error) {
 	if apiKey == "" || secretKey == "" {
 		log.Println("⚠️ [Executor] 警告: APIKey 或 SecretKey 为空。交易执行将失败。")
 	}
-	return &Executor{
-		client: futures.NewClient(apiKey, secretKey),
+	client := futures.NewClient(apiKey, secretKey)
+
+	// --- 1. 获取并缓存精度规则 (解决问题1) ---
+	log.Println("🔄 [Executor] 正在从 Binance 获取交易所精度规则...")
+	precisions, err := fetchPrecisions(client)
+	if err != nil {
+		return nil, fmt.Errorf("初始化 Executor 失败: 无法获取精度规则: %w", err)
 	}
+	log.Printf("✅ [Executor] 成功获取 %d 个交易对的精度规则。", len(precisions))
+
+	return &Executor{
+		client:     client,
+		precisions: precisions,
+	}, nil
 }
 
 func (te *Executor) Order(ctx context.Context, action entity.TradeSignal) error {
@@ -56,11 +82,9 @@ func (te *Executor) Order(ctx context.Context, action entity.TradeSignal) error 
 	}
 	log.Printf("[Executor] %s 杠杆设置成功。", symbol)
 
-	// --- 2. 准备批量订单 ---
-	// 使用 FormatFloat 'f', -1 来自动匹配精度
-	quantityStr := strconv.FormatFloat(action.Quantity, 'f', -1, 64)
-	stopLossStr := strconv.FormatFloat(action.StopLoss, 'f', -1, 64)
-	profitTargetStr := strconv.FormatFloat(action.ProfitTarget, 'f', -1, 64)
+	quantityStr := te.formatQuantity(symbol, action.Quantity)
+	stopLossStr := te.formatPrice(symbol, action.StopLoss)
+	profitTargetStr := te.formatPrice(symbol, action.ProfitTarget)
 
 	orderServices := make([]*futures.CreateOrderService, 0, 3)
 
@@ -164,7 +188,7 @@ func (te *Executor) CloseOrder(ctx context.Context, symbol string) error {
 
 	// --- 3. 提交市价平仓单 ---
 	// 数量必须是正数（绝对值）
-	closeQuantityStr := strconv.FormatFloat(math.Abs(quantity), 'f', -1, 64)
+	closeQuantityStr := te.formatQuantity(symbolWithSuffix, math.Abs(quantity))
 
 	log.Printf("[Executor] 正在提交 %s 的市价平仓单 (Side: %s, Qty: %s)...", symbol, closeSide, closeQuantityStr)
 	_, err = te.client.NewCreateOrderService().
@@ -196,4 +220,71 @@ func (te *Executor) cancelAllOrders(ctx context.Context, symbolWithSuffix string
 		// 暂不返回
 	}
 	return nil
+}
+
+// fetchPrecisions (新增)
+func fetchPrecisions(client *futures.Client) (map[string]SymbolPrecisions, error) {
+	precisionMap := make(map[string]SymbolPrecisions)
+
+	// 使用 context.Background()，因为这是一个必须在启动时完成的关键任务
+	res, err := client.NewExchangeInfoService().Do(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	for _, s := range res.Symbols {
+		var sp SymbolPrecisions
+		for _, f := range s.Filters {
+			switch f["filterType"] {
+			case "PRICE_FILTER":
+				if tickSize, ok := f["tickSize"].(string); ok {
+					sp.PricePrecision = calcPrecision(tickSize)
+				}
+			case "LOT_SIZE":
+				if stepSize, ok := f["stepSize"].(string); ok {
+					sp.QuantityPrecision = calcPrecision(stepSize)
+				}
+			}
+		}
+		precisionMap[s.Symbol] = sp
+	}
+	return precisionMap, nil
+}
+
+// calcPrecision (新增)
+// 将 "0.001" 这样的字符串转换为 3 (小数位数)
+func calcPrecision(stepOrTickSize string) int {
+	// 去掉末尾的 0，例如 "0.0100" -> "0.01"
+	trimmed := strings.TrimRight(stepOrTickSize, "0")
+	parts := strings.Split(trimmed, ".")
+	if len(parts) == 1 {
+		// 没有小数点 (e.g., "1"), 精度为 0
+		return 0
+	}
+	if len(parts) == 2 {
+		// e.g., "0.01" -> "01", 长度为 2
+		return len(parts[1])
+	}
+	return 0 // 默认
+}
+
+// formatPrice (新增)
+func (te *Executor) formatPrice(symbol string, price float64) string {
+	prec, ok := te.precisions[symbol]
+	if !ok {
+		// 回退到旧逻辑
+		return strconv.FormatFloat(price, 'f', -1, 64)
+	}
+	// 使用 fmt.Sprintf 格式化到指定的小数位数
+	return fmt.Sprintf("%.*f", prec.PricePrecision, price)
+}
+
+// formatQuantity (新增)
+func (te *Executor) formatQuantity(symbol string, quantity float64) string {
+	prec, ok := te.precisions[symbol]
+	if !ok {
+		// 回退到旧逻辑
+		return strconv.FormatFloat(quantity, 'f', -1, 64)
+	}
+	return fmt.Sprintf("%.*f", prec.QuantityPrecision, quantity)
 }
