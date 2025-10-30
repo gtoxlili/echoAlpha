@@ -66,6 +66,7 @@ func runDecisionCycle(
 	tradeExecutor *trade.Executor,
 ) {
 	log.Println("----------- 决策周期开始 -----------")
+	defer log.Println("----------- 决策周期结束 -----------")
 
 	// --- 步骤 1: 数据采集 ---
 	log.Println("🔄 1. [数据采集] 正在从 Binance 获取最新市场数据...")
@@ -114,13 +115,22 @@ func runDecisionCycle(
 	log.Printf("🤖 4. [AI决策] 收到 %d 个决策。", len(actions))
 	if len(actions) == 0 {
 		log.Println("   ... 决策为空: AI 决定 [持有/无操作]。")
+		return
 	}
 
 	log.Println("📈 5. [交易执行] 正在处理决策...")
 	for _, action := range actions {
 		switch action.Signal {
 		case "buy_to_enter", "sell_to_enter":
-			log.Printf("   ... 🟩 [开仓] 信号: %s, 币种: %s, 数量: %f, 杠杆: %d", action.Signal, action.Coin, action.Quantity, action.Leverage)
+			// --- 修改后的日志 ---
+			log.Printf("   ... 🟩 [开仓] 信号: %s, 币种: %s, 数量: %f, 杠杆: %d",
+				action.Signal, action.Coin, action.Quantity, action.Leverage)
+			// 【修改点】将 止盈/止损 替换为 InvalidationCondition
+			log.Printf("   ...    ├─ 失效条件: %s, 信心: %.2f",
+				action.InvalidationCondition, action.Confidence)
+			log.Printf("   ...    └─ 理由: %s", action.Justification)
+			// --- 日志结束 ---
+
 			execErr := tradeExecutor.Order(ctx, action)
 			if execErr == nil {
 				tradeManager.Add(action) // 交易成功, *更新本地状态*
@@ -130,6 +140,8 @@ func runDecisionCycle(
 			}
 		case "close":
 			log.Printf("   ... 🟥 [平仓] 信号: %s, 币种: %s", action.Signal, action.Coin)
+			log.Printf("   ...    └─ 理由: %s", action.Justification)
+
 			execErr := tradeExecutor.CloseOrder(ctx, action.Coin)
 			if execErr == nil {
 				tradeManager.Remove(action.Coin) // 交易成功, *更新本地状态*
@@ -139,7 +151,6 @@ func runDecisionCycle(
 			}
 		}
 	}
-	log.Println("----------- 决策周期结束 -----------")
 }
 
 func delay(ctx context.Context) error {
