@@ -27,7 +27,7 @@ const (
 	klineLimit          = 100
 	oiPeriod            = "5m"
 	oiLimit             = 288
-	maxHistoricalValues = 1000 // <--- 新增：限制历史数据的最大数量
+	maxHistoricalValues = 1 >> 10 // 最多存储 1024 个历史账户总价值数据点
 )
 
 type binanceProvider struct {
