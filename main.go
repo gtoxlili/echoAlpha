@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gtoxlili/echoAlpha/collector"
-	"github.com/gtoxlili/echoAlpha/llm"
+	"github.com/gtoxlili/echoAlpha/prompts"
 )
 
 var assetUniverse = []string{"BTC", "ETH", "AERO"}
@@ -15,20 +16,22 @@ func main() {
 
 	provider := collector.ResolveCollector("Binance", assetUniverse)
 
-	agent, err := llm.NewAgent("Binance", assetUniverse, "doubao-seed-1-6-251015")
-	if err != nil {
-		panic(err)
-	}
+	//agent, err := llm.NewAgent("Binance", assetUniverse, "doubao-seed-1-6-251015")
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	data, err := provider.AssemblePromptData(ctx)
 	if err != nil {
 		panic(err)
 	}
 
-	analysis, err := agent.RunAnalysis(ctx, data)
-	if err != nil {
-		panic(err)
-	}
+	fmt.Println(prompts.BuildUserPrompt(data))
 
-	analysis.Print()
+	//analysis, err := agent.RunAnalysis(ctx, data)
+	//if err != nil {
+	//	panic(err)
+	//}
+
+	//analysis.Print()
 }

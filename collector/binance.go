@@ -49,6 +49,7 @@ func newBinanceProvider(apiKey, secretKey string, coins []string) *binanceProvid
 func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.PromptData, error) {
 	var (
 		mu          sync.Mutex
+		accountData entity.AccountData
 		coinDataMap = make(map[string]entity.CoinData, len(b.coins))
 		g, gctx     = errgroup.WithContext(ctx)
 	)
@@ -71,6 +72,21 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 		})
 	}
 
+	// --- 2. 获取账户数据 ---
+	g.Go(func() error {
+		var err error
+		// 同样使用 RetryWithBackoff
+		accountData, err = utils.RetryWithBackoff(func() (entity.AccountData, error) {
+			return b.fetchAccountData(gctx)
+		}, 5)
+
+		if err != nil {
+			log.Printf("error fetching account data: %v", err)
+			return nil // 同上，记录日志但不中断
+		}
+		return nil
+	})
+
 	if err := g.Wait(); err != nil {
 		return lo.Empty[entity.PromptData](), err
 	}
@@ -78,7 +94,8 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 	return entity.PromptData{
 		MinutesElapsed: time.Since(b.createdAt).Minutes(),
 		Coins:          coinDataMap,
-		Account:        lo.Empty[entity.AccountData](), Positions: lo.Empty[[]entity.PositionData]()}, nil
+		Account:        accountData,
+		Positions:      lo.Empty[[]entity.PositionData]()}, nil
 }
 
 func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (entity.CoinData, error) {
@@ -257,4 +274,40 @@ func (b *binanceProvider) fetchCurrentPrice(ctx context.Context, symbol string) 
 	}
 
 	return 0, errors.New("symbol not found in price list")
+}
+
+func (b *binanceProvider) fetchAccountData(ctx context.Context) (entity.AccountData, error) {
+	res, err := b.client.NewGetAccountService().Do(ctx)
+	if err != nil {
+		return lo.Empty[entity.AccountData](), fmt.Errorf("failed to fetch account info: %w", err)
+	}
+
+	var data entity.AccountData
+	var parseErr error
+
+	// AccountValue 对应账户总钱包余额
+	data.AccountValue, parseErr = strconv.ParseFloat(res.TotalWalletBalance, 64)
+	if parseErr != nil {
+		return lo.Empty[entity.AccountData](), fmt.Errorf("error parsing TotalWalletBalance: %v", parseErr)
+	}
+
+	// CashAvailable 对应 USDT 资产的可用余额
+	// 我们使用 lo.Find 在资产列表中查找 "USDT"
+	usdtAsset, found := lo.Find(res.Assets, func(asset *futures.AccountAsset) bool {
+		return asset.Asset == "USDT"
+	})
+
+	if found {
+		data.CashAvailable, parseErr = strconv.ParseFloat(usdtAsset.AvailableBalance, 64)
+		if parseErr != nil {
+			return lo.Empty[entity.AccountData](), fmt.Errorf("error parsing USDT AvailableBalance: %v", parseErr)
+		}
+	} else {
+		data.CashAvailable = 0.0
+	}
+
+	data.ReturnPct = 0.0
+	data.SharpeRatio = 0.0
+
+	return data, nil
 }
