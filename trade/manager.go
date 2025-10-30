@@ -41,6 +41,9 @@ func (tm *Manager) Add(decision entity.TradeSignal) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 	tm.openPositions[decision.Coin] = metadata
+	if err := config.SaveOpenPositions(tm.openPositions); err != nil {
+		log.Printf("Manager: Failed to save open positions: %v", err)
+	}
 	log.Printf("Manager: Added new position %s", decision.Coin)
 }
 
@@ -50,6 +53,9 @@ func (tm *Manager) Remove(symbol string) {
 	defer tm.mu.Unlock()
 	if _, ok := tm.openPositions[symbol]; ok {
 		delete(tm.openPositions, symbol)
+		if err := config.SaveOpenPositions(tm.openPositions); err != nil {
+			log.Printf("Manager: Failed to save open positions: %v", err)
+		}
 		log.Printf("Manager: Removed position %s", symbol)
 	}
 }

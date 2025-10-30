@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/gtoxlili/echoAlpha/config"
 	"github.com/gtoxlili/echoAlpha/entity"
@@ -75,6 +76,9 @@ func (a *Agent) RunAnalysis(
 
 	// 更新最后的组合分析
 	a.lastPortfolioAnalysis = decision.PortfolioAnalysis
+	if err := config.SavePortfolioPersistence(a.lastPortfolioAnalysis); err != nil {
+		log.Printf("warning: failed to save portfolio analysis: %v", err)
+	}
 
 	return decision, nil
 }
