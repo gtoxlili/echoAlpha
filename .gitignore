@@ -9,3 +9,4 @@
 *.sqlite
 config.local.yaml
 /cmd/server/frontend/*
+constant/constant.go
