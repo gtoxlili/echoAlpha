@@ -96,12 +96,18 @@ func (te *Executor) Order(ctx context.Context, action entity.TradeSignal) error 
 
 	// --- 3. 批量执行 ---
 	log.Printf("[Executor] 正在为 %s 批量提交开仓、止损、止盈订单...", symbol)
-	_, err = te.client.NewCreateBatchOrdersService().
+	orders, err := te.client.NewCreateBatchOrdersService().
 		OrderList(orderServices).
 		Do(ctx)
 
 	if err != nil {
 		return fmt.Errorf("批量下单失败 for %s: %w", symbol, err)
+	}
+
+	for _, e := range orders.Errors {
+		if e != nil {
+			return fmt.Errorf("批量下单部分失败 for %s: %w", symbol, e)
+		}
 	}
 
 	log.Printf("[Executor] %s 批量下单成功 (开仓, 止损, 止盈)。", symbol)

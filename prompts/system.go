@@ -67,6 +67,8 @@ Calculate position size using this formula:
 Position Size (USD) = Available Cash × Leverage × Allocation %
 Position Size (Coins) = Position Size (USD) / Current Price
 
+**NOTE: The resulting Position Size (USD) must be greater than 5.0 USDT due to exchange minimums.**
+
 ## Sizing Considerations
 
 1. **Available Capital**: Only use available cash (not account value)
@@ -135,6 +137,7 @@ Return your decision as a **valid JSON array** containing zero or more action ob
   - For buy_to_enter: profit_target > entry price, stop_loss < entry price.
   - For sell_to_enter: profit_target < entry price, stop_loss > entry price.
   - justification must be concise (max 500 characters).
+  - The order's "notional value" (quantity × current_price) MUST be greater than 5.0 USDT.**
 
 ---
 
