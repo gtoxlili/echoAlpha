@@ -76,6 +76,7 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 		mu          sync.Mutex
 		accountData entity.AccountData
 		coinDataMap = make(map[string]entity.CoinData, len(b.coins))
+		positions   []entity.PositionData
 		g, gctx     = errgroup.WithContext(ctx)
 	)
 
@@ -112,6 +113,20 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 		return nil
 	})
 
+	g.Go(func() error {
+		var err error
+		// 同样使用 RetryWithBackoff
+		positions, err = utils.RetryWithBackoff(func() ([]entity.PositionData, error) {
+			return b.fetchPositionsData(gctx)
+		}, 5)
+
+		if err != nil {
+			log.Printf("error fetching positions data: %v", err)
+			return nil // 记录日志但不中断
+		}
+		return nil
+	})
+
 	if err := g.Wait(); err != nil {
 		return lo.Empty[entity.PromptData](), err
 	}
@@ -120,7 +135,8 @@ func (b *binanceProvider) AssemblePromptData(ctx context.Context) (entity.Prompt
 		MinutesElapsed: time.Since(b.createdAt).Minutes(),
 		Coins:          coinDataMap,
 		Account:        accountData,
-		Positions:      lo.Empty[[]entity.PositionData]()}, nil
+		Positions:      positions,
+	}, nil
 }
 
 func (b *binanceProvider) fetchCoinData(ctx context.Context, symbol string) (entity.CoinData, error) {
@@ -388,4 +404,41 @@ func (b *binanceProvider) calculateSharpeRatio() float64 {
 	}
 
 	return avgReturn / stdDevReturn
+}
+
+func (b *binanceProvider) fetchPositionsData(ctx context.Context) ([]entity.PositionData, error) {
+	// NewGetPositionRiskService 会返回所有交易对的风险和持仓信息
+	res, err := b.client.NewGetPositionRiskService().Do(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch position risk: %w", err)
+	}
+
+	positions := make([]entity.PositionData, 0)
+	for _, p := range res {
+		quantity, _ := strconv.ParseFloat(p.PositionAmt, 64)
+
+		// 过滤掉没有持仓的 (PositionAmt == 0)
+		if quantity == 0 {
+			continue
+		}
+
+		// 解析 API 返回的字符串
+		entryPrice, _ := strconv.ParseFloat(p.EntryPrice, 64)
+		liqPrice, _ := strconv.ParseFloat(p.LiquidationPrice, 64)
+		pnl, _ := strconv.ParseFloat(p.UnRealizedProfit, 64)
+		leverage, _ := strconv.ParseInt(p.Leverage, 10, 64)
+		notional, _ := strconv.ParseFloat(p.Notional, 64)
+
+		positions = append(positions, entity.PositionData{
+			Symbol:        strings.TrimSuffix(p.Symbol, usdtSuffix), // 移除USDT后缀, 与 coinDataMap 统一
+			Quantity:      quantity,
+			EntryPrice:    entryPrice,
+			LiqPrice:      liqPrice,
+			UnrealizedPNL: pnl,
+			Leverage:      int(leverage),
+			NotionalUSD:   notional,
+		})
+	}
+
+	return positions, nil
 }

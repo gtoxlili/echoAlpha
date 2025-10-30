@@ -36,6 +36,20 @@ func main() {
 			panic(err)
 		}
 
+		// 暂不考虑 "僵尸" 持仓 的情况
+		for idx, positions := range data.Positions {
+			meta, exists := tradeManager.Get(positions.Symbol)
+			if !exists {
+				continue
+			}
+			data.Positions[idx].ExitPlan.ProfitTarget = meta.ProfitTarget
+			data.Positions[idx].ExitPlan.StopLoss = meta.StopLoss
+			data.Positions[idx].ExitPlan.InvalidCond = meta.InvalidationCondition
+			data.Positions[idx].Confidence = meta.Confidence
+			data.Positions[idx].RiskUSD = meta.RiskUSD
+			data.Positions[idx].AgeInMinutes = time.Since(meta.EntryTime).Minutes()
+		}
+
 		actions, err := agent.RunAnalysis(ctx, data)
 		if err != nil {
 			panic(err)
@@ -55,7 +69,6 @@ func main() {
 				log.Printf("AI decision: Close %s", action.Coin)
 				execErr := tradeExecutor.CloseOrder(action.Coin)
 				if execErr == nil {
-					// 2. 交易成功, *从我们的状态管理器中移除*
 					tradeManager.Remove(action.Coin)
 				} else {
 					log.Printf("Failed to execute close order for %s: %v", action.Coin, execErr)

@@ -60,16 +60,3 @@ func (tm *Manager) Get(symbol string) (entity.TradeMetadata, bool) {
 	meta, ok := tm.openPositions[symbol]
 	return meta, ok
 }
-
-// GetAll 返回所有当前持仓的元数据
-func (tm *Manager) GetAll() map[string]entity.TradeMetadata {
-	tm.mu.RLock()
-	defer tm.mu.RUnlock()
-
-	// 返回一个副本以保证线程安全
-	clone := make(map[string]entity.TradeMetadata, len(tm.openPositions))
-	for k, v := range tm.openPositions {
-		clone[k] = v
-	}
-	return clone
-}
