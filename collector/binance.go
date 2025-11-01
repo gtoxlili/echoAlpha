@@ -50,7 +50,7 @@ func newBinanceProvider(apiKey, secretKey string, coins []string) *binanceProvid
 		panic(err)
 	}
 
-	initialAmount, err := strconv.ParseFloat(res.TotalWalletBalance, 64)
+	initialAmount, err := strconv.ParseFloat(res.TotalMarginBalance, 64)
 	if err != nil {
 		panic(err)
 	}
@@ -327,9 +327,9 @@ func (b *binanceProvider) fetchAccountData(ctx context.Context) (entity.AccountD
 	var parseErr error
 
 	// 1. 解析当前账户总价值
-	currentValue, parseErr := strconv.ParseFloat(res.TotalWalletBalance, 64)
+	currentValue, parseErr := strconv.ParseFloat(res.TotalMarginBalance, 64)
 	if parseErr != nil {
-		return lo.Empty[entity.AccountData](), fmt.Errorf("failed to parse TotalWalletBalance: %w", parseErr)
+		return lo.Empty[entity.AccountData](), fmt.Errorf("failed to parse TotalMarginBalance: %w", parseErr)
 	}
 	data.AccountValue = currentValue
 
