@@ -41,6 +41,7 @@ func newBinanceProvider(apiKey, secretKey string, coins []string) *binanceProvid
 		coins: lo.Map(coins, func(coin string, _ int) string {
 			return strings.ToUpper(coin) + usdtSuffix
 		}),
+		historicalAccountValues: make([]float64, 0, config.MaxHistoricalValues),
 	}
 
 	res, err := utils.RetryWithBackoff(func() (*futures.Account, error) {
@@ -54,7 +55,7 @@ func newBinanceProvider(apiKey, secretKey string, coins []string) *binanceProvid
 	if err != nil {
 		panic(err)
 	}
-	provider.historicalAccountValues = []float64{initialAmount}
+	provider.historicalAccountValues = append(provider.historicalAccountValues, initialAmount)
 	provider.initialAccountValue = initialAmount
 	provider.createdAt = time.Now().Truncate(3 * time.Minute).Add(3 * time.Minute)
 
