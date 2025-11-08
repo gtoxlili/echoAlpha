@@ -58,6 +58,7 @@ func (a *Agent) RunAnalysis(
 			openai.SystemMessage(a.systemPrompt),
 			openai.UserMessage(userPrompt),
 		},
+		MaxTokens:   openai.Int(1024 * 32),
 		Temperature: openai.Float(config.LLMTemperature),
 		ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{
 			OfJSONObject: lo.ToPtr(shared.NewResponseFormatJSONObjectParam()),

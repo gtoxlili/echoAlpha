@@ -7,8 +7,10 @@ import (
 
 	"github.com/gtoxlili/echoAlpha/collector"
 	"github.com/gtoxlili/echoAlpha/config"
+	"github.com/gtoxlili/echoAlpha/entity"
 	"github.com/gtoxlili/echoAlpha/llm"
 	"github.com/gtoxlili/echoAlpha/trade"
+	"github.com/samber/lo"
 )
 
 func main() {
@@ -19,7 +21,7 @@ func main() {
 	provider := collector.ResolveCollector("Binance", config.AssetUniverse)
 	startingCapital := provider.GetStartingCapital()
 
-	agent, err := llm.NewAgent("Binance", config.AssetUniverse, "doubao-seed-1-6-251015", startingCapital)
+	agent, err := llm.NewAgent("Binance", config.AssetUniverse, "kimi-k2-thinking", startingCapital)
 	if err != nil {
 		log.Panicf("❌ [初始化] 致命错误: 无法创建 AI Agent: %v", err)
 	}
@@ -30,7 +32,7 @@ func main() {
 		log.Panicf("❌ [初始化] 致命错误: 无法创建 Trade Executor: %v", err)
 	}
 
-	log.Printf("... 交易所: Binance, 模型: %s", "doubao-seed-1-6-251015")
+	log.Printf("... 交易所: Binance, 模型: %s", "kimi-k2-thinking")
 	log.Printf("... 初始资本: $%.2f", startingCapital)
 	log.Printf("... 决策周期: %.0f 分钟", config.KlineInterval.Minutes())
 
@@ -114,6 +116,12 @@ func runDecisionCycle(
 		log.Println("   ... 决策为空: AI 决定 [持有/无操作]。")
 		return
 	}
+
+	decision.Actions = lo.Filter(decision.Actions, func(action entity.TradeSignal, _ int) bool {
+		return action.Confidence >= 0.3
+	})
+
+	panic(222)
 
 	log.Println("📈 5. [交易执行] 正在处理决策...")
 	for _, action := range decision.Actions {

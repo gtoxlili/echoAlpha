@@ -16,6 +16,11 @@ func resolveClient(modelName string) (openai.Client, error) {
 			option.WithAPIKey(config.VOLC_API_KEY),
 			option.WithBaseURL(config.VOLC_BASE_URL),
 		), nil
+	case strings.HasPrefix(modelName, "kimi-"):
+		return openai.NewClient(
+			option.WithAPIKey(config.KIMI_API_KEY),
+			option.WithBaseURL(config.KIMI_BASE_URL),
+		), nil
 	default:
 		panic("unimplemented model provider resolver")
 	}
