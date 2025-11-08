@@ -121,8 +121,6 @@ func runDecisionCycle(
 		return action.Confidence >= 0.3
 	})
 
-	panic(222)
-
 	log.Println("📈 5. [交易执行] 正在处理决策...")
 	for _, action := range decision.Actions {
 		switch action.Signal {
