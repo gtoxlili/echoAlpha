@@ -3,7 +3,7 @@ package config
 import "time"
 
 const (
-	KlineInterval       = 3 * time.Minute
+	KlineInterval       = 5 * time.Minute
 	KlineIntervalLonger = 4 * time.Hour
 
 	SeriesLength        = 16

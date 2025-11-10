@@ -21,7 +21,7 @@ func main() {
 	provider := collector.ResolveCollector("Binance", config.AssetUniverse)
 	startingCapital := provider.GetStartingCapital()
 
-	agent, err := llm.NewAgent("Binance", config.AssetUniverse, "kimi-k2-thinking", startingCapital)
+	agent, err := llm.NewAgent("Binance", config.AssetUniverse, "kimi-k2-thinking-turbo", startingCapital)
 	if err != nil {
 		log.Panicf("❌ [初始化] 致命错误: 无法创建 AI Agent: %v", err)
 	}
@@ -32,7 +32,7 @@ func main() {
 		log.Panicf("❌ [初始化] 致命错误: 无法创建 Trade Executor: %v", err)
 	}
 
-	log.Printf("... 交易所: Binance, 模型: %s", "kimi-k2-thinking")
+	log.Printf("... 交易所: Binance, 模型: %s", "kimi-k2-thinking-turbo")
 	log.Printf("... 初始资本: $%.2f", startingCapital)
 	log.Printf("... 决策周期: %.0f 分钟", config.KlineInterval.Minutes())
 
