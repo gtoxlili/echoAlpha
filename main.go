@@ -102,7 +102,9 @@ func runDecisionCycle(
 
 	// --- 步骤 3: AI 分析 ---
 	log.Println("🧠 3. [AI分析] 正在将数据提交给 LLM 进行分析...")
-	decision, err := agent.RunAnalysis(ctx, data)
+	timeoutCtx, cancel := context.WithTimeout(ctx, config.KlineInterval-time.Minute)
+	defer cancel()
+	decision, err := agent.RunAnalysis(timeoutCtx, data)
 	if err != nil {
 		log.Printf("❌ [AI分析] 错误: %v", err)
 		return // AI 分析失败，等待下个周期
