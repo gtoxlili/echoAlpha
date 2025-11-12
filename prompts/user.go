@@ -205,8 +205,8 @@ func BuildUserPrompt(data entity.PromptData, portfolio string) string {
 		// --- 账户字段 ---
 		"{return_pct}", fmt.Sprintf("%.4f", data.Account.ReturnPct),
 		"{sharpe_ratio}", fmt.Sprintf("%.4f", data.Account.SharpeRatio),
-		"{cash_available}", fmt.Sprintf("%.4f", data.Account.CashAvailable),
-		"{account_value}", fmt.Sprintf("%.4f", data.Account.AccountValue),
+		"{cash_available}", fmt.Sprintf("%.4f", data.Account.CashAvailable-3),
+		"{account_value}", fmt.Sprintf("%.4f", data.Account.AccountValue-3),
 
 		// --- 仓位块 ---
 		"{positions_block}", positionsStr,
