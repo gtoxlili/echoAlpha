@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gtoxlili/echoAlpha/config"
 	"github.com/gtoxlili/echoAlpha/entity"
 )
 
@@ -15,13 +16,13 @@ Below, we are providing you with a variety of collector data, price data, and pr
 
 ⚠️ **CRITICAL: ALL OF THE PRICE OR SIGNAL DATA BELOW IS ORDERED: OLDEST → NEWEST**
 
-**Timeframes note:** Unless stated otherwise in a section title, intraday series are provided at **3-minute intervals**. If a coin uses a different interval, it is explicitly stated in that coin's section.
+**Timeframes note:** Unless stated otherwise in a section title, intraday series are provided at **{interval}-minute intervals**. If a coin uses a different interval, it is explicitly stated in that coin's section.
 
 ---
 
 ## PREVIOUS ANALYSIS & THOUGHT PROCESS
 
-**This was your internal monologue from the last decision cycle (3 minutes ago). Use it to maintain your train of thought.**
+**This was your internal monologue from the last decision cycle ({interval} minutes ago). Use it to maintain your train of thought.**
 
 > {last_portfolio_analysis}
 
@@ -65,7 +66,7 @@ const coinDataTemplate = `### ALL {symbol} DATA
 - Open Interest: Latest: {oi_latest} | Average: {oi_avg}
 - Funding Rate: {funding_rate}
 
-**Intraday Series (3-minute intervals, oldest → latest):**
+**Intraday Series (5-minute intervals, oldest → latest):**
 
 Mid prices: [{prices_3m}]
 
@@ -211,6 +212,8 @@ func BuildUserPrompt(data entity.PromptData, portfolio string) string {
 		// --- 仓位块 ---
 		"{positions_block}", positionsStr,
 		"{last_portfolio_analysis}", portfolio,
+
+		"{interval}", fmt.Sprintf("%.0f", config.KlineInterval.Minutes()),
 	)
 
 	// 4. 执行替换并返回

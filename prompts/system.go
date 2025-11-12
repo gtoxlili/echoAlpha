@@ -257,7 +257,7 @@ Do NOT confuse the order. This is a common error that leads to incorrect decisio
 # CONTEXT WINDOW MANAGEMENT
 
 You have limited context. The prompt contains:
-- ~{series_length} recent data points per indicator (3-minute intervals)
+- ~{series_length} recent data points per indicator ({interval}-minute intervals)
 - ~{series_length} recent data points for 4-hour timeframe
 - Current account state and open positions
 
@@ -324,6 +324,7 @@ func BuildSystemPrompt(
 		"{decision_frequency}", decisionFrequency,
 		"{leverage_range}", fmt.Sprintf("%dx to %dx", minLeverage, maxLeverage),
 		"{series_length}", strconv.Itoa(config.SeriesLength),
+		"{interval}", fmt.Sprintf("%.0f", config.KlineInterval.Minutes()),
 	)
 
 	return r.Replace(systemPromptTemplate)
